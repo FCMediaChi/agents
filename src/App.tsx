@@ -79,6 +79,7 @@ export default function App() {
   const [brandPrimary, setBrandPrimary] = useState<string>("#1A9EF2")
   const [brandSecondary, setBrandSecondary] = useState<string>("#4551D3")
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
+  const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
   const [isExported, setIsExported] = useState<boolean>(false)
 
   const activePages = SIMULATOR_TEMPLATES[simulatorCategory]
@@ -90,8 +91,8 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#1A9EF2] flex items-center justify-center text-white shadow-lg shadow-[#1A9EF2]/25">
-              <Compass className="w-6 h-6 animate-spin-slow" />
+            <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-white shadow-md shadow-[#1A9EF2]/5 overflow-hidden p-1">
+              <img src="/logo-blue.png" alt="First Creation Media" className="w-full h-full object-contain" />
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">
@@ -556,9 +557,35 @@ export default function App() {
                         type="text"
                         value={brandingLogo}
                         onChange={(e) => setBrandingLogo(e.target.value)}
-                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800"
+                        className="w-full p-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 mb-3"
                         placeholder="My Web Agency" 
                       />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-500 block mb-1.5">Agency Logo Asset</label>
+                      <div className="grid grid-cols-4 gap-2">
+                        {[
+                          { file: '/logo-blue.png', name: 'Blue', bg: 'bg-[#C3E8FF]/20' },
+                          { file: '/logo-navy.png', name: 'Navy', bg: 'bg-slate-100' },
+                          { file: '/logo-white.png', name: 'White', bg: 'bg-slate-800' },
+                          { file: '/logo-black.png', name: 'Black', bg: 'bg-slate-50' }
+                        ].map((logoItem) => (
+                          <button
+                            key={logoItem.file}
+                            type="button"
+                            onClick={() => setBrandLogoFile(logoItem.file)}
+                            className={`p-1.5 rounded-lg border text-center transition-all ${
+                              brandLogoFile === logoItem.file 
+                                ? 'border-[#1A9EF2] ring-2 ring-[#C3E8FF]' 
+                                : 'border-slate-200 hover:border-slate-300'
+                            } ${logoItem.bg}`}
+                          >
+                            <img src={logoItem.file} alt={logoItem.name} className="h-4 w-auto mx-auto object-contain" />
+                            <span className="text-[8px] text-slate-500 font-semibold block mt-1">{logoItem.name}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-3">

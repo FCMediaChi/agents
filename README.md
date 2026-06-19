@@ -1,73 +1,75 @@
-# React + TypeScript + Vite
+# 🚀 SiteBlueprint Landing & Pricing Page
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SiteBlueprint is an all-in-one website planning tool that turns a rough client discovery session into a professional, deliverable-ready proposal—complete with hierarchical sitemaps, customized page outlines, tailor-made content questionnaires, and client-branded PDF/vector sitemap exports—in minutes, not hours.
 
-Currently, two official plugins are available:
+This sub-project implements the high-fidelity, interactive **Landing & Pricing Page** using the official **First Creation Media** brand design.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## 🛠️ Tech Stack & Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Core**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS v4.0 (leveraging the new CSS-based theme system)
+- **Icons**: Lucide React
+- **Typography & Brand Style**: 
+  - **Headings & Titles**: *Juniper Light* (self-hosted OTF web font, loaded via `@font-face`)
+  - **Body Copy**: *Poppins* (Regular, Medium, Semibold, and Bold TTF self-hosted font family)
+  - **Color Block Theme**: Chocolates and Deep Wine/Burgundy (reflecting high-status, creative, and "quiet luxury" astaticism)
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🏃‍♂️ How to Run This Project Locally
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Follow these quick steps to get the development server up and running on your local machine:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Prerequisite: Verify Node.js
+Ensure you have Node.js installed (v18+ recommended):
+```bash
+node -v
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Install Project Dependencies
+Run `npm install` inside the project workspace directory (`/home/agent-engineer/agents` or your cloned repository root):
+```bash
+npm install
 ```
+
+### 3. Start the Development Server
+Launch the local development server (this project is pre-configured to bind publicly to port `3000` on all interfaces):
+```bash
+npm run dev
+```
+
+The app will start and will be live at:
+- **Local url**: `http://localhost:3000`
+- **Network url**: `http://<your-ip>:3000`
+
+---
+
+## 📦 Building for Production
+
+To bundle and optimize the project for a production release, run the following command:
+
+```bash
+npm run build
+```
+
+This compiles all TypeScript assets, bundles Tailwind styling, and outputs a highly optimized static bundle into the `dist/` directory, ready to be served from any single-origin hosting provider.
+
+To test the compiled bundle locally:
+```bash
+npm run preview -- --port 3000 --host
+```
+
+---
+
+## ✨ Key Interactive Features on the Landing Page
+
+To help prospective "Planners" and "Explorers" experience the platform immediately, the landing page includes a fully functional **Interactive Website Planning Simulator**:
+
+1. **Interactive Templates**: Toggle between *E-Commerce*, *Local Business*, and *SaaS Platform* to instantly load corresponding hierarchical sitemaps.
+2. **Interactive Sitemap & Page Detail Inspection**: Click through sitemap page cards to view real-time changes in the Page Outline Editor.
+3. **Tailored Content Questionnaires**: Witness how question banks automatically morph based on the active page type (e.g. homepage vs contact vs pricing).
+4. **Premium Branding Customizer**: Interactively customize the agency logo name, primary color hex, secondary color hex, and **select from the 4 brand-new designer-made transparent logo assets** (*Blue, Navy, White, Black*).
+5. **Real-time Proposal Preview**: Instantly watch the choose-your-own-brand customizer reflect its logo asset and colors in the "Proposal Cover Preview".
+6. **Vector PDF Export Simulation**: Trigger a mock export to see the vector proposal compiler compile the package in real-time.
