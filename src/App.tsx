@@ -1,4 +1,10 @@
 import { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './lib/auth'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import SitemapBuilderPage from './pages/SitemapBuilderPage'
 import { 
   Compass, 
   Layers, 
@@ -69,7 +75,14 @@ const SIMULATOR_TEMPLATES = {
   ]
 }
 
-export default function App() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function LandingPage() {
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")
@@ -938,4 +951,19 @@ export default function App() {
       </footer>
     </div>
   )
+}
+
+export default function App() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
+      <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
+      <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
+      <Route path="*" element={<LandingPage />} />
+    </Routes>
+  );
 }
