@@ -818,7 +818,7 @@ function LandingPage() {
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-extrabold text-slate-900">One-Time License</h3>
+                    <h3 className="text-xl font-extrabold text-slate-900">TheBlueprint Pro — One-Time License</h3>
                     <span className="px-2 py-0.5 rounded bg-[#C3E8FF] text-[#1A9EF2] text-xs font-bold">POPULAR</span>
                   </div>
                   <p className="text-slate-500 text-sm mt-1">For freelancers, individual builders, and designers</p>
@@ -849,7 +849,7 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <a href="https://buy.stripe.com/aFadR94nP9H97ci9QA7Re00" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white transition-all text-sm shadow-md shadow-[#1A9EF2]/10 text-center">
+                <a href="https://buy.stripe.com/8x214n4nP06zaoud2M7Re02" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white transition-all text-sm shadow-md shadow-[#1A9EF2]/10 text-center">
                   Purchase License
                 </a>
               </div>
@@ -859,7 +859,7 @@ function LandingPage() {
             <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
               <div className="space-y-6">
                 <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Agency Subscription</h3>
+                  <h3 className="text-xl font-extrabold text-slate-900">TheBlueprint Pro — Monthly Subscription</h3>
                   <p className="text-slate-500 text-sm mt-1">For growing marketing teams, agencies, and builders</p>
                 </div>
                 
@@ -887,7 +887,7 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <a href="https://buy.stripe.com/3cI4gz1bD7z17cie6Q7Re01" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
+                <a href="https://buy.stripe.com/aFa3cvcUl6uXbsyd2M7Re03" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
                   Subscribe Now
                 </a>
               </div>
