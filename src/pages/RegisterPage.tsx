@@ -33,7 +33,7 @@ export default function RegisterPage() {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Create your account</h1>
-          <p className="text-slate-500 text-sm mt-1">Get started with SiteBlueprint free</p>
+          <p className="text-slate-500 text-sm mt-1">Get started with TheBlueprint free</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">

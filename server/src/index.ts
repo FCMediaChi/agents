@@ -57,8 +57,8 @@ async function main() {
 
   // Start server
   const server = app.listen(config.port, '0.0.0.0', () => {
-    console.log(`[SiteBlueprint] Server running on http://0.0.0.0:${config.port}`);
-    console.log(`[SiteBlueprint] Environment: ${config.nodeEnv}`);
+    console.log(`[TheBlueprint] Server running on http://0.0.0.0:${config.port}`);
+    console.log(`[TheBlueprint] Environment: ${config.nodeEnv}`);
   });
 
   // Auto-persist DB periodically (every 10 seconds)
@@ -66,7 +66,7 @@ async function main() {
 
   // Graceful shutdown
   const shutdown = () => {
-    console.log('[SiteBlueprint] Shutting down...');
+    console.log('[TheBlueprint] Shutting down...');
     clearInterval(persistInterval);
     persistDb();
     closeDb();
@@ -78,6 +78,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('[SiteBlueprint] Failed to start:', err);
+  console.error('[TheBlueprint] Failed to start:', err);
   process.exit(1);
 });

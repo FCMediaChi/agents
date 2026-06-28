@@ -109,7 +109,7 @@ function LandingPage() {
             </div>
             <div>
               <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">
-                SiteBlueprint
+                TheBlueprint
               </span>
               <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-[#C3E8FF] text-[#1A9EF2]">
                 by First Creation Media
@@ -154,7 +154,7 @@ function LandingPage() {
             <div className="lg:col-span-7 text-center lg:text-left space-y-6">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C3E8FF]/60 text-[#4551D3] text-sm font-semibold">
                 <Sparkles className="w-4 h-4 text-[#1A9EF2]" />
-                Introducing SiteBlueprint v1.0
+                Introducing TheBlueprint v1.0
               </div>
               
               <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -350,7 +350,7 @@ function LandingPage() {
                   <div className="w-12 h-12 rounded-lg bg-[#C3E8FF] text-[#4551D3] flex items-center justify-center font-bold text-xl">2</div>
                   <h3 className="text-xl font-bold text-slate-900">Avoid Costly Agency Overpricing</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">
-                    Agencies often overprice abstract web concepts. When you bring a compiled SiteBlueprint PDF proposal including exact page schemas, briefs, and block mockups, you save up to 40% on design and development.
+                    Agencies often overprice abstract web concepts. When you bring a compiled TheBlueprint PDF proposal including exact page schemas, briefs, and block mockups, you save up to 40% on design and development.
                   </p>
                 </div>
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-4">
@@ -443,12 +443,12 @@ function LandingPage() {
       <section id="simulator" className="py-20 bg-slate-100 border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
-            <div className="text-xs font-bold text-[#1A9EF2] uppercase tracking-wider">Try SiteBlueprint Live</div>
+            <div className="text-xs font-bold text-[#1A9EF2] uppercase tracking-wider">Try TheBlueprint Live</div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
               Interactive Planning Simulator
             </h2>
             <p className="text-base text-slate-600">
-              Experience the absolute power of SiteBlueprint right here. Click a template type, browse the live sitemap, view dynamically generated questionnaires, adjust your custom agency branding, and preview your proposal.
+              Experience the absolute power of TheBlueprint right here. Click a template type, browse the live sitemap, view dynamically generated questionnaires, adjust your custom agency branding, and preview your proposal.
             </p>
           </div>
 
@@ -914,9 +914,9 @@ function LandingPage() {
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-slate-900">What makes SiteBlueprint PDF exports unique?</h3>
+              <h3 className="text-lg font-bold text-slate-900">What makes TheBlueprint PDF exports unique?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                SiteBlueprint exports beautiful, agency-branded, vector-based PDF files. Rather than just screenshotting cards, the export compiles the entire sitemap tree, individual page briefs, and visual layouts into an elegant, unified project proposal document with your agency's logo and primary colors.
+                TheBlueprint exports beautiful, agency-branded, vector-based PDF files. Rather than just screenshotting cards, the export compiles the entire sitemap tree, individual page briefs, and visual layouts into an elegant, unified project proposal document with your agency's logo and primary colors.
               </p>
             </div>
 
@@ -937,7 +937,7 @@ function LandingPage() {
             <div className="w-8 h-8 rounded-lg bg-[#1A9EF2] flex items-center justify-center text-white font-bold">
               <Compass className="w-5 h-5" />
             </div>
-            <span className="text-lg font-bold">SiteBlueprint</span>
+            <span className="text-lg font-bold">TheBlueprint</span>
           </div>
           
           <p className="text-sm max-w-md mx-auto">

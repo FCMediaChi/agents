@@ -13,7 +13,7 @@ export async function checkProjectLimit(req: AuthenticatedRequest, res: Response
     if (projectCount >= 1) {
       res.status(403).json({
         error: 'Limit Reached',
-        message: 'Free accounts are limited to 1 planning project. Upgrade to SiteBlueprint Premium for unlimited projects, custom branding, and professional PDF exports!',
+        message: 'Free accounts are limited to 1 planning project. Upgrade to TheBlueprint Premium for unlimited projects, custom branding, and professional PDF exports!',
       });
       return;
     }
@@ -25,7 +25,7 @@ export function requirePaidTier(req: AuthenticatedRequest, res: Response, next: 
   if (req.user!.subscriptionTier !== 'PAID') {
     res.status(403).json({
       error: 'Premium Feature',
-      message: 'This feature (custom branding and professional PDF exporting) is exclusive to SiteBlueprint Premium. Please upgrade your plan.',
+      message: 'This feature (custom branding and professional PDF exporting) is exclusive to TheBlueprint Premium. Please upgrade your plan.',
     });
     return;
   }

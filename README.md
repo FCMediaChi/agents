@@ -1,6 +1,6 @@
-# 🚀 SiteBlueprint Landing & Pricing Page
+# 🚀 TheBlueprint Landing & Pricing Page
 
-SiteBlueprint is an all-in-one website planning tool that turns a rough client discovery session into a professional, deliverable-ready proposal—complete with hierarchical sitemaps, customized page outlines, tailor-made content questionnaires, and client-branded PDF/vector sitemap exports—in minutes, not hours.
+TheBlueprint is an all-in-one website planning tool that turns a rough client discovery session into a professional, deliverable-ready proposal—complete with hierarchical sitemaps, customized page outlines, tailor-made content questionnaires, and client-branded PDF/vector sitemap exports—in minutes, not hours.
 
 This sub-project implements the high-fidelity, interactive **Landing & Pricing Page** using the official **First Creation Media** brand design.
 
