@@ -106,7 +106,7 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response): void => {
   if ((data.branding_logo_url !== undefined || data.branding_primary_color !== undefined || data.branding_secondary_color !== undefined) && req.user!.subscriptionTier !== 'PAID') {
     res.status(403).json({
       error: 'Premium Feature',
-      message: 'Custom branding is exclusive to SiteBlueprint Premium. Please upgrade your plan.',
+      message: 'Custom branding is exclusive to TheBlueprint Premium. Please upgrade your plan.',
     });
     return;
   }

@@ -80,7 +80,7 @@ export default function ProposalView({ projectId, pages }: Props) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${clientName || 'Proposal'} - SiteBlueprint</title>
+        <title>${clientName || 'Proposal'} - TheBlueprint</title>
         <style>
           @page { margin: 1.5cm; }
           body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; line-height: 1.6; padding: 20px; }
