@@ -132,7 +132,7 @@ function LandingPage() {
               Sign In
             </a>
             <a 
-              href="#pricing" 
+              href="/register" 
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md hover:shadow-lg shadow-[#1A9EF2]/10"
             >
               Start Free
@@ -803,9 +803,9 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm">
+                <a href="/register" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
                   Get Started Free
-                </button>
+                </a>
               </div>
             </div>
 
@@ -849,9 +849,9 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white transition-all text-sm shadow-md shadow-[#1A9EF2]/10">
+                <a href="https://buy.stripe.com/aFadR94nP9H97ci9QA7Re00" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white transition-all text-sm shadow-md shadow-[#1A9EF2]/10 text-center">
                   Purchase License
-                </button>
+                </a>
               </div>
             </div>
 
@@ -887,9 +887,9 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm">
+                <a href="https://buy.stripe.com/3cI4gz1bD7z17cie6Q7Re01" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
                   Subscribe Now
-                </button>
+                </a>
               </div>
             </div>
 
