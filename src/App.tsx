@@ -581,8 +581,8 @@ function LandingPage() {
                         {[
                           { file: '/logo-blue.png', name: 'Blue', bg: 'bg-[#C3E8FF]/20' },
                           { file: '/logo-navy.png', name: 'Navy', bg: 'bg-slate-100' },
-                          { file: '/logo-white.png', name: 'White', bg: 'bg-slate-800' },
-                          { file: '/logo-black.png', name: 'Black', bg: 'bg-slate-50' }
+                          { file: '/logo-white.png', name: 'Black', bg: 'bg-slate-800' },
+                          { file: '/logo-black.png', name: 'White', bg: 'bg-slate-50' }
                         ].map((logoItem) => (
                           <button
                             key={logoItem.file}
