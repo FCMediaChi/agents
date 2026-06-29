@@ -887,7 +887,7 @@ function LandingPage() {
               </div>
 
               <div className="pt-8">
-                <a href="https://buy.stripe.com/aFa3cvcUl6uXbsyd2M7Re03" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
+                <a href="https://buy.stripe.com/14A14n1o8cfygra1rof4i7L" target="_blank" rel="noopener noreferrer" className="block w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm text-center">
                   Subscribe Now
                 </a>
               </div>
