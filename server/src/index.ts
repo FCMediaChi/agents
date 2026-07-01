@@ -12,6 +12,7 @@ import pageRoutes from './routes/pages.js';
 import questionnaireRoutes from './routes/questionnaires.js';
 import wireframeRoutes from './routes/wireframes.js';
 import proposalRoutes from './routes/proposals.js';
+import auditRoutes from '../../audit/routes/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,6 +38,7 @@ async function main() {
   app.use('/api/pages', questionnaireRoutes);
   app.use('/api/pages', wireframeRoutes);
   app.use('/api/projects', proposalRoutes);
+  app.use('/api/audit', auditRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {
