@@ -19,7 +19,6 @@ import {
   Download, 
   Palette, 
   TrendingUp,
-  CheckCircle2,
   Lock
 } from 'lucide-react'
 
@@ -94,7 +93,81 @@ function LandingPage() {
   const [brandSecondary, setBrandSecondary] = useState<string>("#4551D3")
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
   const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
-  const [isExported, setIsExported] = useState<boolean>(false)
+
+  function generateProposalHTML(): string {
+    const pages = activePages.map((p: any) => `
+      <div style="margin-bottom: 24px; page-break-inside: avoid;">
+        <h2 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px;">${p.title}</h2>
+        <div style="display: inline-block; font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;">${p.type}</div>
+        ${p.description ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Description:</strong> ${p.description}</p>` : ''}
+        ${p.notes ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Notes:</strong> ${p.notes}</p>` : ''}
+      </div>
+    `).join('');
+
+    const projectName = simulatorCategory === 'ecommerce' ? 'E-Commerce Shop'
+      : simulatorCategory === 'localbusiness' ? 'Local Plumber Service'
+      : 'Dashboard SaaS Platform';
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>TheBlueprint Proposal — ${projectName}</title>
+<style>
+  @page { margin: 20mm 15mm; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cover { background: linear-gradient(135deg, ${brandPrimary}, ${brandSecondary}); color: white; padding: 60px 40px; text-align: center; }
+  .cover h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.5px; }
+  .cover .subtitle { font-size: 14px; opacity: 0.9; }
+  .cover .brand { font-size: 11px; opacity: 0.7; margin-top: 24px; }
+  .section { padding: 24px 40px; border-bottom: 1px solid #e2e8f0; }
+  .section h2 { font-size: 18px; color: ${brandPrimary}; margin: 0 0 16px; }
+  .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .estimate { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 12px; }
+  .estimate .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+  .estimate .total { border-top: 2px solid ${brandPrimary}; margin-top: 8px; padding-top: 8px; font-weight: 700; font-size: 15px; }
+  .print-btn { position: fixed; bottom: 20px; right: 20px; background: ${brandPrimary}; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  @media print { .print-btn { display: none; } }
+</style></head><body>
+  <div class="cover">
+    <h1>${projectName}</h1>
+    <div class="subtitle">Website Project Proposal</div>
+    <div class="brand">Prepared by ${brandingLogo} · TheBlueprint by First Creation Media</div>
+  </div>
+  <div class="section">
+    <h2>Executive Summary</h2>
+    <p style="font-size: 13px; line-height: 1.6; color: #475569;">This proposal outlines a comprehensive website plan for <strong>${projectName}</strong>, including a full sitemap structure, detailed page briefs, content questionnaires, wireframe layouts, and a pricing estimate. The project is designed to be build-ready, allowing your development team to proceed immediately with a clear roadmap.</p>
+  </div>
+  <div class="section">
+    <h2>Sitemap Overview (${activePages.length} Pages)</h2>
+    <div class="page-grid">${pages}</div>
+  </div>
+  <div class="section">
+    <h2>Wireframe Preview</h2>
+    <p style="font-size: 12px; color: #64748b;">Each page includes structured wireframe blocks in the following layout:</p>
+    <ul style="font-size: 12px; color: #475569; line-height: 1.8;">
+      <li><strong>Header</strong> — Logo, navigation, primary CTA</li>
+      <li><strong>Hero Section</strong> — Headline, subheadline, hero image/illustration</li>
+      <li><strong>Content Blocks</strong> — Feature grids, text sections, media embeds</li>
+      <li><strong>Footer</strong> — Contact info, links, copyright</li>
+    </ul>
+  </div>
+  <div class="section">
+    <h2>Pricing Estimate</h2>
+    <div class="estimate">
+      <div class="row"><span>Strategy & Planning</span><span>$1,200</span></div>
+      <div class="row"><span>Design (UI/UX)</span><span>$2,400</span></div>
+      <div class="row"><span>Development</span><span>$3,600</span></div>
+      <div class="row"><span>Content Creation</span><span>$800</span></div>
+      <div class="row"><span>Testing & QA</span><span>$600</span></div>
+      <div class="row total"><span>Total Estimated Investment</span><span>$8,600</span></div>
+    </div>
+    <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">* Estimates based on ${activePages.length}-page sitemap. Final pricing may vary based on scope.</p>
+  </div>
+  <div class="section" style="text-align: center; border-bottom: none;">
+    <p style="font-size: 13px; color: #64748b;">This proposal was generated by <strong style="color: ${brandPrimary};">TheBlueprint</strong></p>
+    <p style="font-size: 11px; color: #94a3b8;">${brandingLogo} · First Creation Media</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</body></html>`;
+  }
 
   const activePages = SIMULATOR_TEMPLATES[simulatorCategory]
   const currentPage = activePages[selectedSimPage] || activePages[0]
@@ -663,22 +736,6 @@ function LandingPage() {
                         Vector Sitemap
                       </span>
                     </div>
-
-                    {isExported && (
-                      <div className="absolute inset-0 bg-[#1A9EF2]/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-white animate-fade-in">
-                        <CheckCircle2 className="w-8 h-8 text-white mb-2" />
-                        <span className="text-xs font-bold">Vector PDF Exported!</span>
-                        <span className="text-[9px] text-[#C3E8FF] leading-relaxed mt-1">
-                          Downloaded successfully to client's download path.
-                        </span>
-                        <button 
-                          onClick={() => setIsExported(false)}
-                          className="mt-3 px-3 py-1 bg-white text-[#1A9EF2] rounded text-[10px] font-bold shadow-sm hover:bg-[#C3E8FF] transition-all"
-                        >
-                          Reset Simulation
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -686,7 +743,11 @@ function LandingPage() {
               {/* Action Button */}
               <button
                 onClick={() => {
-                  setIsExported(true);
+                  const win = window.open('', '_blank');
+                  if (win) {
+                    win.document.write(generateProposalHTML());
+                    win.document.close();
+                  }
                 }}
                 className="w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white shadow-md shadow-[#1A9EF2]/20 flex items-center justify-center gap-2 text-sm transition-all"
               >
