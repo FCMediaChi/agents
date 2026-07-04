@@ -5,6 +5,7 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import SitemapBuilderPage from './pages/SitemapBuilderPage'
+import AuditPage from './pages/audit/AuditPage'
 import { 
   Compass, 
   Layers, 
@@ -121,6 +122,7 @@ function LandingPage() {
             <a href="#features" className="hover:text-[#1A9EF2] transition-colors">Features</a>
             <a href="#segments" className="hover:text-[#1A9EF2] transition-colors">Who is it for?</a>
             <a href="#simulator" className="hover:text-[#1A9EF2] transition-colors">Interactive Demo</a>
+            <a href="/audit" className="hover:text-[#1A9EF2] transition-colors">Audit</a>
             <a href="#pricing" className="hover:text-[#1A9EF2] transition-colors">Pricing</a>
           </nav>
 
@@ -963,6 +965,7 @@ export default function App() {
       <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
       <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
+      <Route path="/audit" element={<AuditPage />} />
       <Route path="*" element={<LandingPage />} />
     </Routes>
   );
