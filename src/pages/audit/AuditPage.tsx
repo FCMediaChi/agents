@@ -1,7 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../lib/auth';
-import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, ArrowRight, BarChart3, ExternalLink } from 'lucide-react';
+import { useState } from 'react';
+import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink } from 'lucide-react';
 
 interface AuditCheck {
   check_name: string;
@@ -38,7 +36,6 @@ function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
   const color = score >= 90 ? '#22c55e' : score >= 70 ? '#86efac' : score >= 50 ? '#eab308' : score >= 30 ? '#f97316' : '#ef4444';
-  const label = score >= 90 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Average' : score >= 30 ? 'Poor' : 'Critical';
 
   return (
     <div className="flex flex-col items-center">
@@ -101,8 +98,6 @@ function DimensionCard({ dim }: { dim: AuditDimension }) {
 }
 
 export default function AuditPage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
