@@ -195,7 +195,6 @@ function LandingPage() {
             <a href="#features" className="hover:text-[#1A9EF2] transition-colors">Features</a>
             <a href="#segments" className="hover:text-[#1A9EF2] transition-colors">Who is it for?</a>
             <a href="#simulator" className="hover:text-[#1A9EF2] transition-colors">Interactive Demo</a>
-            <a href="/audit" className="hover:text-[#1A9EF2] transition-colors">Audit</a>
             <a href="#pricing" className="hover:text-[#1A9EF2] transition-colors">Pricing</a>
           </nav>
 
