@@ -45,6 +45,32 @@ async function main() {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // Host-based routing middleware
+  // If accessed from audit. subdomain, redirect root to /audit
+  app.use((req, res, next) => {
+    const host = req.headers.host || '';
+    if (host.startsWith('audit.')) {
+      // Redirect root to the audit page
+      if (req.path === '/') {
+        return res.redirect(302, '/audit');
+      }
+      // For API paths, let them pass through normally
+      if (req.path.startsWith('/api/')) {
+        return next();
+      }
+      // For SPA paths under audit, serve index.html (handled by catch-all below)
+      // Rewrite the URL so the React app initializes at the audit route
+      // This ensures direct navigation to /audit/* works correctly
+      if (req.path.startsWith('/audit')) {
+        return next();
+      }
+      // For any other non-API, non-audit path, redirect to /audit
+      // This handles the case where someone visits audit.firstcreationmedia.com/random-path
+      return res.redirect(302, '/audit');
+    }
+    next();
+  });
+
   // Serve static frontend assets in production
   const distPath = path.resolve(__dirname, '../../dist');
   app.use(express.static(distPath));
