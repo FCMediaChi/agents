@@ -94,15 +94,73 @@ function LandingPage() {
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
   const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
 
-  function generateProposalHTML(): string {
-    const pages = activePages.map((p: any) => `
-      <div style="margin-bottom: 24px; page-break-inside: avoid;">
-        <h2 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px;">${p.title}</h2>
-        <div style="display: inline-block; font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;">${p.type}</div>
-        ${p.description ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Description:</strong> ${p.description}</p>` : ''}
-        ${p.notes ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Notes:</strong> ${p.notes}</p>` : ''}
-      </div>
-    `).join('');
+  function getWireframeBlocks(pageType: string): { title: string; subtitle: string; type: string }[] {
+        const blocks: Record<string, { title: string; subtitle: string; type: string }[]> = {
+          homepage: [
+            { title: 'Header', subtitle: 'Logo, navigation, primary CTA', type: 'header' },
+            { title: 'Hero Section', subtitle: 'Headline, subheadline, hero image', type: 'hero' },
+            { title: 'Feature Highlights', subtitle: 'Benefits grid with icons', type: 'features' },
+            { title: 'Testimonials', subtitle: 'Customer reviews carousel', type: 'testimonials' },
+            { title: 'CTA Banner', subtitle: 'Call-to-action with button', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          services: [
+            { title: 'Header', subtitle: 'Logo, navigation, service CTA', type: 'header' },
+            { title: 'Service Overview', subtitle: 'Intro paragraph and key stats', type: 'hero' },
+            { title: 'Services Grid', subtitle: 'Detailed offering cards with pricing', type: 'features' },
+            { title: 'Process Flow', subtitle: 'Step-by-step how it works', type: 'process' },
+            { title: 'CTA Section', subtitle: 'Book now / Get a quote', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          about: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Mission Statement', subtitle: 'Brand story and values', type: 'hero' },
+            { title: 'Team Section', subtitle: 'Team member cards', type: 'team' },
+            { title: 'Milestones', subtitle: 'Company timeline', type: 'timeline' },
+            { title: 'CTA', subtitle: 'Join our team / Contact us', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          contact: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Contact Form', subtitle: 'Name, email, message fields', type: 'form' },
+            { title: 'Info Section', subtitle: 'Address, phone, email, hours', type: 'info' },
+            { title: 'Map', subtitle: 'Embedded Google Maps', type: 'map' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          pricing: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Pricing Tiers', subtitle: 'Plan comparison cards', type: 'pricing' },
+            { title: 'FAQ', subtitle: 'Frequently asked questions', type: 'faq' },
+            { title: 'CTA', subtitle: 'Start free trial / Contact sales', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+        };
+        return blocks[pageType] || blocks.homepage;
+      }
+
+      function generateProposalHTML(): string {
+        const pages = activePages.map((p: any) => {
+          const pageBlocks = getWireframeBlocks(p.type);
+          const blocksHtml = pageBlocks.map((b) => `
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 4px;">
+              <span style="font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 6px; border-radius: 3px; min-width: 60px; text-align: center;">${b.type}</span>
+              <span style="font-size: 11px; color: #1e293b; font-weight: 600;">${b.title}</span>
+              <span style="font-size: 10px; color: #64748b;">— ${b.subtitle}</span>
+            </div>
+          `).join('');
+          return `
+            <div style="margin-bottom: 28px; page-break-inside: avoid;">
+              <h2 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px;">${p.title}</h2>
+              <div style="display: inline-block; font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;">${p.type}</div>
+              ${p.description ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Description:</strong> ${p.description}</p>` : ''}
+              ${p.notes ? `<p style="font-size: 12px; color: #475569; margin: 4px 0 8px; line-height: 1.5;"><strong>Notes:</strong> ${p.notes}</p>` : ''}
+              <div style="margin-top: 8px; padding-left: 8px; border-left: 3px solid ${brandPrimary};">
+                <div style="font-size: 10px; font-weight: 700; color: ${brandPrimary}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Wireframe Blocks</div>
+                ${blocksHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
 
     const projectName = simulatorCategory === 'ecommerce' ? 'E-Commerce Shop'
       : simulatorCategory === 'localbusiness' ? 'Local Plumber Service'
@@ -136,19 +194,8 @@ function LandingPage() {
     <p style="font-size: 13px; line-height: 1.6; color: #475569;">This proposal outlines a comprehensive website plan for <strong>${projectName}</strong>, including a full sitemap structure, detailed page briefs, content questionnaires, wireframe layouts, and a pricing estimate. The project is designed to be build-ready, allowing your development team to proceed immediately with a clear roadmap.</p>
   </div>
   <div class="section">
-    <h2>Sitemap Overview (${activePages.length} Pages)</h2>
-    <div class="page-grid">${pages}</div>
-  </div>
-  <div class="section">
-    <h2>Wireframe Preview</h2>
-    <p style="font-size: 12px; color: #64748b;">Each page includes structured wireframe blocks in the following layout:</p>
-    <ul style="font-size: 12px; color: #475569; line-height: 1.8;">
-      <li><strong>Header</strong> — Logo, navigation, primary CTA</li>
-      <li><strong>Hero Section</strong> — Headline, subheadline, hero image/illustration</li>
-      <li><strong>Content Blocks</strong> — Feature grids, text sections, media embeds</li>
-      <li><strong>Footer</strong> — Contact info, links, copyright</li>
-    </ul>
-  </div>
+          <h2>Page Wireframes & Blocks</h2>
+          ${pages}
   <div class="section">
     <h2>Pricing Estimate</h2>
     <div class="estimate">
