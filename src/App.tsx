@@ -1020,13 +1020,13 @@ export default function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
-      <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
-      <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-      <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
       <Route path="/audit" element={<AuditPage />} />
-      <Route path="*" element={<LandingPage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
+          <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
+          <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
+          <Route path="*" element={<LandingPage />} />
     </Routes>
   );
 }
