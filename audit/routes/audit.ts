@@ -61,7 +61,8 @@ router.post('/run', async (req: Request, res: Response) => {
     `).run(reportId, user.id, targetUrl);
 
     // Run audit asynchronously (don't await — respond immediately)
-    runAudit(targetUrl).then(async (report) => {
+    const userTier = user.subscription_tier || 'FREE';
+    runAudit(targetUrl, { tier: userTier.toLowerCase() }).then(async (report) => {
       const db2 = getDb();
 
       // Update report
