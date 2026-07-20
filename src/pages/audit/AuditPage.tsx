@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
 
-const STRIPE_ONE_TIME = 'https://buy.stripe.com/aFa00j9I9g5x0NU2o87Re04';
-const STRIPE_MONTHLY = 'https://buy.stripe.com/9B63cvfeY3J25Mw0nkfAc01';
+const STRIPE_SINGLE = 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02';
+const STRIPE_TEAM_MONTHLY = 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03';
+const STRIPE_TEAM_YEARLY = 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05';
+const STRIPE_AGENCY_MONTHLY = 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04';
+const STRIPE_AGENCY_YEARLY = 'https://buy.stripe.com/5kQ9AT6Is7Ziej23gmifAc05';
 
 interface AuditCheck {
   check_name: string;
@@ -32,6 +35,31 @@ interface AuditReport {
   error?: string;
   created_at: string;
   dimensions: AuditDimension[];
+}
+
+function LockedDimensionCard({ dim }: { dim: AuditDimension }) {
+  return (
+    <div className="rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4 opacity-75">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">{dim.icon || '🔒'}</span>
+          <div>
+            <div className="font-bold text-slate-500">{dim.label}</div>
+            <div className="text-xs text-slate-400">🔒 Locked — upgrade to access</div>
+          </div>
+        </div>
+        <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+          Premium
+        </span>
+      </div>
+      <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+        <p className="text-xs text-slate-400">{dim.checks[0]?.recommendation || 'Upgrade to unlock this dimension.'}</p>
+        <a href="#pricing" className="mt-2 inline-block text-xs font-semibold text-[#1A9EF2] hover:text-[#4551D3]">
+          View Plans →
+        </a>
+      </div>
+    </div>
+  );
 }
 
 function ScoreRing({ score, size = 80 }: { score: number; size?: number }) {
@@ -109,18 +137,19 @@ const FEATURES = [
 ];
 
 const FAQ_ITEMS = [
-  { q: 'What does the audit check?', a: 'TheBlueprint Audit analyzes 7 key dimensions: homepage quality, mobile readiness, branding consistency, navigation & UX, trust & credibility, conversion readiness, and accessibility compliance. Each dimension has 4-5 individual checks.' },
+  { q: 'What does the audit check?', a: 'Nuria Website Audit analyzes up to 7 key dimensions: homepage quality, mobile readiness, branding consistency, navigation & UX, trust & credibility, conversion readiness, and accessibility compliance. Each dimension has 4-5 individual checks. Free audits cover the homepage dimension; full access requires an upgrade.' },
   { q: 'How long does an audit take?', a: 'Most audits complete within 30-60 seconds. The tool fetches and analyzes your website\'s HTML, CSS, and meta data to generate a comprehensive report.' },
-  { q: 'Do I need to sign up?', a: 'Free audits are available without an account. For full reports, history, and premium features, you can create a free account and upgrade to paid plans.' },
+  { q: 'Do I need to sign up?', a: 'Free homepage audits are available without an account. For full reports, history, and premium features, you can create a free account and upgrade to paid plans.' },
   { q: 'What do the scores mean?', a: 'Scores range from 0-100. A (90+): Excellent. B (70-89): Good. C (50-69): Average. D (30-49): Poor. F (below 30): Critical — needs immediate attention.' },
   { q: 'Can I audit my own site?', a: 'Yes! Enter any public URL. The tool works best on live, publicly accessible websites. Password-protected or local-only sites cannot be audited.' },
-  { q: 'What if I need more than 1 audit?', a: 'The free tier includes 1 full audit. Upgrade to a one-time purchase ($39) for 10 audits, or subscribe ($9/mo) for unlimited audits, priority support, and branded PDF reports.' },
+  { q: 'What\'s included in each plan?', a: 'Free: homepage-only audit. Single Use ($29): full 7-dimension audit for 1 website. Team ($49/mo or $470/yr): up to 10 websites, full audits. Agency ($79/mo or $755/yr): unlimited websites, white-labeling, client management.' },
 ];
 
 const PLANS = [
-  { name: 'Free', price: '$0', desc: 'Try it out', features: ['1 full audit', '7-dimension report', 'Email results'], cta: 'Try Free', href: '#audit-form', featured: false },
-  { name: 'Pro One-Time', price: '$39', desc: 'For occasional audits', features: ['10 audits', 'Full 7-dimension report', 'PDF export', 'History & tracking'], cta: 'Buy Now', href: STRIPE_ONE_TIME, featured: false },
-  { name: 'Pro Monthly', price: '$9', desc: 'For regular auditing', features: ['Unlimited audits', 'Full 7-dimension report', 'Branded PDF export', 'Priority support'], cta: 'Subscribe', href: STRIPE_MONTHLY, featured: true },
+  { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', href: '#audit-form', featured: false },
+  { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', href: STRIPE_SINGLE, featured: false },
+  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
+  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
 ];
 
 export default function AuditPage() {
@@ -171,14 +200,15 @@ export default function AuditPage() {
         <div className="max-w-5xl mx-auto px-4 py-20 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-semibold mb-6 backdrop-blur-sm">
             <BarChart3 className="w-4 h-4" />
-            TheBlueprint Audit
+            Nuria Website Audit
           </div>
           <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
             Audit Your Website <br className="hidden md:block" />in <span className="text-[#C3E8FF]">60 Seconds</span>
           </h1>
           <p className="text-lg text-white/80 max-w-2xl mx-auto mb-8">
             Get a plain-English report across 7 quality dimensions — homepage, mobile, branding,
-            navigation, trust, conversion, and accessibility. No expert knowledge required.
+            navigation, trust, conversion, and accessibility. Free audits cover the homepage dimension;
+            full 7-dimension reports available on paid plans.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button onClick={() => setShowTool(true)} className="px-8 py-3.5 rounded-xl font-bold bg-white text-[#1A9EF2] hover:bg-[#C3E8FF] transition-all shadow-lg text-base flex items-center gap-2">
@@ -235,19 +265,19 @@ export default function AuditPage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="max-w-5xl mx-auto px-4 py-20">
+      <section id="pricing" className="max-w-6xl mx-auto px-4 py-20">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-extrabold text-slate-900">Simple Pricing</h2>
-          <p className="text-slate-600 mt-2">Try for free, upgrade when you need more</p>
+          <p className="text-slate-600 mt-2">Start with a free homepage audit, upgrade when you need more</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {PLANS.map((plan) => (
-            <div key={plan.name} className={`rounded-2xl border-2 p-6 text-center ${plan.featured ? 'border-[#1A9EF2] bg-white shadow-lg shadow-[#1A9EF2]/10 relative' : 'border-slate-200 bg-white'}`}>
-              {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-xs font-bold rounded-full">Most Popular</div>}
+            <div key={plan.name} className={`rounded-2xl border-2 p-6 text-center flex flex-col ${plan.featured ? 'border-[#1A9EF2] bg-white shadow-lg shadow-[#1A9EF2]/10 relative' : 'border-slate-200 bg-white'}`}>
+              {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-xs font-bold rounded-full whitespace-nowrap">Most Popular</div>}
               <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
               <div className="text-3xl font-extrabold text-slate-900 my-3">{plan.price}</div>
               <p className="text-xs text-slate-500 mb-4">{plan.desc}</p>
-              <ul className="text-xs text-slate-600 space-y-2 mb-6 text-left">
+              <ul className="text-xs text-slate-600 space-y-2 mb-6 text-left flex-1">
                 {plan.features.map((f) => (
                   <li key={f} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />{f}</li>
                 ))}
@@ -256,6 +286,12 @@ export default function AuditPage() {
                 className={`block w-full py-2.5 rounded-xl font-bold text-sm transition-all ${plan.featured ? 'bg-[#1A9EF2] hover:bg-[#4551D3] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}>
                 {plan.cta}
               </a>
+              {(plan as any).secondaryCta && (
+                <a href={(plan as any).secondaryHref} target="_blank" rel="noopener noreferrer"
+                  className="block w-full mt-2 py-2 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all">
+                  {(plan as any).secondaryCta}
+                </a>
+              )}
             </div>
           ))}
         </div>
@@ -297,7 +333,7 @@ export default function AuditPage() {
             <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-8">
               <div className="text-center mb-6">
                 <h2 className="text-xl font-extrabold text-slate-900">Enter Your Website URL</h2>
-                <p className="text-sm text-slate-500">We'll analyze it across 7 quality dimensions</p>
+                <p className="text-sm text-slate-500">Free tier analyzes the homepage. Upgrade for full 7-dimension reports.</p>
               </div>
               <div className="flex gap-3">
                 <div className="flex-1 relative">
@@ -344,7 +380,11 @@ export default function AuditPage() {
                 </div>
                 <h2 className="text-lg font-bold text-slate-900">Dimension Breakdown</h2>
                 <div className="grid gap-3">
-                  {report.dimensions.map((dim) => (<DimensionCard key={dim.dimension} dim={dim} />))}
+                  {report.dimensions.map((dim) => (
+                    dim.checks.length === 1 && dim.checks[0].check_name.endsWith('_locked')
+                      ? <LockedDimensionCard key={dim.dimension} dim={dim} />
+                      : <DimensionCard key={dim.dimension} dim={dim} />
+                  ))}
                 </div>
                 <div className="text-center">
                   <button onClick={() => { setReport(null); setUrl(''); }} className="text-sm text-[#1A9EF2] hover:text-[#4551D3] font-medium">Run another audit →</button>
@@ -367,7 +407,7 @@ export default function AuditPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-8 text-center text-xs text-slate-400">
-          TheBlueprint Audit by First Creation Media
+          Nuria Website Audit by First Creation Media
         </div>
       </footer>
     </div>

@@ -35,7 +35,7 @@ async function fetchUrl(targetUrl: string): Promise<FetchResult> {
     const response = await fetch(normalizedUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; TheBlueprintAudit/1.0; +https://theblueprint.app)',
+        'User-Agent': 'Mozilla/5.0 (compatible; NuriaAudit/1.0; +https://firstcreationmedia.com)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
       },
@@ -65,14 +65,22 @@ async function fetchUrl(targetUrl: string): Promise<FetchResult> {
 }
 
 function buildOverallSummary(dimensions: AuditDimension[], overallScore: number): string {
+  const realDims = dimensions.filter(d => d.score > 0 || !d.checks[0]?.check_name.endsWith('_locked'));
+  const lockedCount = dimensions.length - realDims.length;
   const passed = dimensions.filter(d => d.grade === 'pass').length;
   const warned = dimensions.filter(d => d.grade === 'warn').length;
-  const failed = dimensions.filter(d => d.grade === 'fail').length;
+  const failed = dimensions.filter(d => d.grade === 'fail' && !d.checks[0]?.check_name.endsWith('_locked')).length;
 
-  const strongest = dimensions.reduce((prev, curr) => curr.score > prev.score ? curr : prev, dimensions[0]);
-  const weakest = dimensions.reduce((prev, curr) => curr.score < prev.score ? curr : prev, dimensions[0]);
+  const strongest = realDims.reduce((prev, curr) => curr.score > prev.score ? curr : prev, realDims[0]);
+  const weakest = realDims.reduce((prev, curr) => curr.score < prev.score ? curr : prev, realDims[0]);
 
   let summary = `Your website scores ${overallScore}/100. `;
+
+  if (lockedCount > 0) {
+    summary += `Free audit complete! ${lockedCount} premium dimension${lockedCount > 1 ? 's are' : ' is'} locked. `;
+    summary += 'Upgrade for the full 7-dimension report. ';
+    return summary.trim();
+  }
 
   if (overallScore >= 70) {
     summary += 'Looking good! ';
@@ -82,7 +90,7 @@ function buildOverallSummary(dimensions: AuditDimension[], overallScore: number)
     summary += 'Several issues need attention. ';
   }
 
-  summary += `${passed} of 7 dimensions pass, ${warned} need attention`;
+  summary += `${passed} of ${dimensions.length} dimensions pass, ${warned} need attention`;
   if (failed > 0) summary += `, and ${failed} require urgent fixes`;
 
   if (strongest && weakest && strongest.dimension !== weakest.dimension) {
@@ -93,7 +101,8 @@ function buildOverallSummary(dimensions: AuditDimension[], overallScore: number)
   return summary;
 }
 
-export async function runAudit(url: string): Promise<AuditReport> {
+export async function runAudit(url: string, options?: { tier?: string }): Promise<AuditReport> {
+  const tier = options?.tier || 'free';
   const reportId = crypto.randomUUID
     ? crypto.randomUUID()
     : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -131,19 +140,55 @@ export async function runAudit(url: string): Promise<AuditReport> {
       html: fetchResult.html,
     };
 
-    // Run all 7 checkers
-    const checkerResults = [
-      analyzeHomepage(input),
-      analyzeMobile(input),
-      analyzeBranding(input),
-      analyzeNavigation(input),
-      analyzeTrust(input),
-      analyzeConversion(input),
-      analyzeAccessibility(input),
+    // Run checkers — free tier only gets homepage analysis
+    const allCheckers = [
+      analyzeHomepage,
+      analyzeMobile,
+      analyzeBranding,
+      analyzeNavigation,
+      analyzeTrust,
+      analyzeConversion,
+      analyzeAccessibility,
     ];
+
+    let checkerResults;
+    if (tier === 'free') {
+      const homepageResult = analyzeHomepage(input);
+      const lockedDimensions = allCheckers.slice(1).map((fn) => {
+        const info = fn(input);
+        return {
+          dimension: info.dimension,
+          label: info.label,
+          icon: info.icon,
+          checks: [{
+            check_name: `${info.dimension}_locked`,
+            label: `${info.label} Analysis`,
+            passed: false,
+            severity: 'info' as const,
+            detail: 'Available on paid plans',
+            recommendation: 'Upgrade to Single Use ($29) or Team ($49/mo) for full access to all 7 dimensions.',
+          }],
+        };
+      });
+      checkerResults = [homepageResult, ...lockedDimensions];
+    } else {
+      checkerResults = allCheckers.map(fn => fn(input));
+    }
 
     // Convert to dimensions with scores
     const dimensions: AuditDimension[] = checkerResults.map(r => {
+      const isLocked = r.checks.length === 1 && r.checks[0].check_name.endsWith('_locked');
+      if (isLocked) {
+        return {
+          dimension: r.dimension,
+          label: r.label,
+          score: 0,
+          grade: 'fail' as const,
+          icon: r.icon,
+          summary: `🔒 ${r.label}: Upgrade to access this dimension.`,
+          checks: r.checks,
+        };
+      }
       const score = calculateDimensionScore(r.checks);
       return {
         dimension: r.dimension,
