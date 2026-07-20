@@ -142,13 +142,13 @@ const FAQ_ITEMS = [
   { q: 'Do I need to sign up?', a: 'Free homepage audits are available without an account. For full reports, history, and premium features, you can create a free account and upgrade to paid plans.' },
   { q: 'What do the scores mean?', a: 'Scores range from 0-100. A (90+): Excellent. B (70-89): Good. C (50-69): Average. D (30-49): Poor. F (below 30): Critical — needs immediate attention.' },
   { q: 'Can I audit my own site?', a: 'Yes! Enter any public URL. The tool works best on live, publicly accessible websites. Password-protected or local-only sites cannot be audited.' },
-  { q: 'What\'s included in each plan?', a: 'Free: homepage-only audit. Single Use ($29): full 7-dimension audit for 1 website. Team ($49/mo or $470/yr): up to 10 websites, full audits. Agency ($79/mo or $755/yr): unlimited websites, white-labeling, client management.' },
+  { q: 'What\'s included in each plan?', a: 'Free: homepage-only audit. Single Use ($29): full 7-dimension audit for 1 website. Team ($49/mo or $470/yr): up to 10 websites, 5 user seats, full audits. Agency ($79/mo or $755/yr): unlimited websites, unlimited users, white-labeling, client management.' },
 ];
 
 const PLANS = [
   { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', href: '#audit-form', featured: false },
   { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', href: STRIPE_SINGLE, featured: false },
-  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
+  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Up to 5 user seats', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
   { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
 ];
 
