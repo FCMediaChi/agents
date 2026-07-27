@@ -152,9 +152,10 @@ export default function PipelineLanding() {
                 price: '$79',
                 period: '/mo',
                 yearly: '$758/yr',
+                yearlyHref: 'https://buy.stripe.com/7sY14n8QAgvO4Is4DAfAc0e',
                 features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
                 cta: 'Get Started',
-                href: '#',
+                href: 'https://buy.stripe.com/3cI9AT5Eoa7qej20nkfAc0d',
                 featured: false,
               },
               {
@@ -162,9 +163,10 @@ export default function PipelineLanding() {
                 price: '$199',
                 period: '/mo',
                 yearly: '$1,910/yr',
+                yearlyHref: 'https://buy.stripe.com/8x200j5EodjCcaU2vsfAc0g',
                 features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
                 cta: 'Get Started',
-                href: '#',
+                href: 'https://buy.stripe.com/6oUbJ1aYIcfya2M3zwfAc0f',
                 featured: true,
               },
               {
@@ -191,10 +193,14 @@ export default function PipelineLanding() {
                       <a href={plan.href} className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
                         {plan.yearlyCta}
                       </a>
+                    ) : plan.yearlyHref ? (
+                      <a href={plan.yearlyHref} className="text-slate-500 underline hover:text-[#1A9EF2] transition-colors">
+                        {plan.yearly}
+                      </a>
                     ) : (
                       <span className="text-slate-500">{plan.yearly}</span>
                     )}
-                    {!plan.yearlyCta && ' when billed annually'}
+                    {!plan.yearlyCta && !plan.yearlyHref && ' when billed annually'}
                   </p>
                 )}
                 {!plan.yearly && <div className="mb-4"></div>}
