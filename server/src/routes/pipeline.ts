@@ -1,10 +1,25 @@
 import { Router, Response } from 'express';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { getDb } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { requirePipelineAccess } from '../middleware/trial.js';
 import { AuthenticatedRequest } from '../types.js';
-import { generateCaseStudy, auditSite, type CaseStudyInput } from '../caseStudyEngine.js';
+import { generateCaseStudy, type CaseStudyInput, type AgencyInfo } from '../caseStudyEngine.js';
+
+// Screenshot upload config
+const UPLOAD_DIR = '/home/team/shared/pipeline-uploads';
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const storage = multer.diskStorage({
+  destination: UPLOAD_DIR,
+  filename: (_req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, unique);
+  },
+});
+const upload = multer({ storage, limits: { files: 5, fileSize: 10 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -123,20 +138,32 @@ router.get('/case-studies/:id', authenticate, requirePipelineAccess, (req: Authe
 });
 
 // POST /api/pipeline/case-studies
-router.post('/case-studies', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
-  const { client_name, client_url, old_site_url, traffic_data, revenue_data, screenshots } = req.body;
+router.post('/case-studies', authenticate, requirePipelineAccess, upload.array('screenshots', 5), (req: AuthenticatedRequest, res: Response): void => {
+  const { client_name, client_url, old_site_url, traffic_data, revenue_data } = req.body;
   if (!client_name || !client_name.trim()) {
     res.status(400).json({ error: 'Client name is required' }); return;
   }
   const db = getDb();
   const id = uuidv4();
-  const td = traffic_data ? JSON.stringify(traffic_data) : null;
-  const rd = revenue_data ? JSON.stringify(revenue_data) : null;
-  const ss = screenshots ? JSON.stringify(screenshots) : null;
+
+  // Handle file uploads
+  const files = (req as any).files as Express.Multer.File[] | undefined;
+  const screenshotPaths: string[] = files ? files.map(f => `/pipeline-uploads/${f.filename}`) : [];
+
+  // Parse JSON fields that come as strings in multipart
+  let td = null;
+  let rd = null;
+  try {
+    if (traffic_data) td = typeof traffic_data === 'string' ? JSON.parse(traffic_data) : traffic_data;
+    if (revenue_data) rd = typeof revenue_data === 'string' ? JSON.parse(revenue_data) : revenue_data;
+  } catch { /* keep null */ }
+
+  const ss = screenshotPaths.length > 0 ? JSON.stringify(screenshotPaths) : null;
   db.prepare(
     'INSERT INTO pipeline_case_studies (id, user_id, client_name, client_url, old_site_url, screenshots, traffic_data, revenue_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, req.user!.userId, client_name.trim(), client_url || null, old_site_url || null, ss, td, rd);
+  ).run(id, req.user!.userId, client_name.trim(), client_url || null, old_site_url || null, ss, typeof td === 'object' ? JSON.stringify(td) : td, typeof rd === 'object' ? JSON.stringify(rd) : rd);
   const study = db.prepare('SELECT * FROM pipeline_case_studies WHERE id = ?').get(id) as any;
+  if (study.screenshots) study.screenshots = JSON.parse(study.screenshots);
   res.status(201).json({ case_study: study });
 });
 
@@ -173,15 +200,18 @@ router.post('/case-studies/:id/generate', authenticate, requirePipelineAccess, a
   const td = existing.traffic_data ? JSON.parse(existing.traffic_data) : {};
   const rd = existing.revenue_data ? JSON.parse(existing.revenue_data) : {};
 
-  // Run light audit on old site
-  let audit;
-  if (existing.old_site_url) {
-    try {
-      audit = await auditSite(existing.old_site_url);
-    } catch { /* audit failure is non-fatal */ }
+  // Get agency info
+  let agency: AgencyInfo | undefined;
+  const agencyRow = db.prepare('SELECT * FROM pipeline_agencies WHERE user_id = ?').get(req.user!.userId) as any;
+  if (agencyRow) {
+    agency = {
+      agency_name: agencyRow.agency_name,
+      services: agencyRow.services ? JSON.parse(agencyRow.services) : [],
+      industries: agencyRow.industries ? JSON.parse(agencyRow.industries) : [],
+    };
   }
 
-  // Generate
+  // Generate using template engine (async — runs real audit)
   const input: CaseStudyInput = {
     client_name: existing.client_name,
     client_url: existing.client_url,
@@ -189,13 +219,22 @@ router.post('/case-studies/:id/generate', authenticate, requirePipelineAccess, a
     traffic_data: td,
     revenue_data: rd,
   };
-  const generated = generateCaseStudy(input, audit);
+  const generated = await generateCaseStudy(input, agency);
 
   // Save
   const gc = JSON.stringify(generated);
   db.prepare('UPDATE pipeline_case_studies SET generated_content = ?, status = ? WHERE id = ?').run(gc, 'generated', req.params.id);
 
   res.json({ case_study: { ...existing, generated_content: generated, status: 'generated' } });
+});
+
+// DELETE /api/pipeline/case-studies/:id
+router.delete('/case-studies/:id', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
+  const db = getDb();
+  const existing = db.prepare('SELECT * FROM pipeline_case_studies WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.userId) as any;
+  if (!existing) { res.status(404).json({ error: 'Case study not found' }); return; }
+  db.prepare('DELETE FROM pipeline_case_studies WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.userId);
+  res.json({ success: true });
 });
 
 // --- Pitches stub ---

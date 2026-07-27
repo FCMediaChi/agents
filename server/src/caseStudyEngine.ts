@@ -1,123 +1,34 @@
-import * as cheerio from 'cheerio';
+import { runAudit } from '../../../audit/engine/index.js';
 
 export interface CaseStudyInput {
   client_name: string;
   client_url?: string;
   old_site_url?: string;
   traffic_data?: {
-    monthly_visitors_before?: number;
-    monthly_visitors_after?: number;
-    bounce_rate_before?: number;
-    bounce_rate_after?: number;
-    avg_session_before?: number;
-    avg_session_after?: number;
+    monthly_visitors?: number;
+    bounce_rate?: number;
+    avg_session_duration?: number;
   };
   revenue_data?: {
-    monthly_revenue_before?: number;
-    monthly_revenue_after?: number;
-    conversion_rate_before?: number;
-    conversion_rate_after?: number;
-    lead_growth_before?: number;
-    lead_growth_after?: number;
+    monthly_revenue?: number;
+    conversion_rate?: number;
+    lead_growth?: number;
   };
-}
-
-export interface SiteAuditResult {
-  url: string;
-  title: string | null;
-  issues: string[];
-  score: number;
 }
 
 export interface GeneratedCaseStudy {
   problem: string;
   solution: string;
   results: string;
-  metrics: MetricBlock[];
+  before_after_table: { label: string; before: string; after: string }[];
   narrative_title: string;
   executive_summary: string;
 }
 
-export interface MetricBlock {
-  label: string;
-  before: string;
-  after: string;
-  change: string;
-  positive: boolean;
-}
-
-async function fetchSite(url: string): Promise<{ html: string; error?: string }> {
-  const normalized = url.startsWith('http') ? url : `https://${url}`;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 10000);
-    const res = await fetch(normalized, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NuriaPipeline/1.0)' },
-      redirect: 'follow',
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return { html: '', error: `HTTP ${res.status}` };
-    return { html: await res.text() };
-  } catch (e: any) {
-    return { html: '', error: e.message || 'Fetch failed' };
-  }
-}
-
-export async function auditSite(url: string): Promise<SiteAuditResult> {
-  const { html, error } = await fetchSite(url);
-  const issues: string[] = [];
-  let title: string | null = null;
-
-  if (error) {
-    issues.push(`Could not fetch site: ${error}`);
-    return { url, title: null, issues, score: 0 };
-  }
-
-  const $ = cheerio.load(html);
-
-  // Title
-  title = $('title').text().trim() || null;
-  if (!title) issues.push('Missing page title');
-  else if (title.length < 10) issues.push('Page title is too short (< 10 chars)');
-  else if (title.length > 70) issues.push('Page title is too long (> 70 chars)');
-
-  // Meta description
-  const metaDesc = $('meta[name="description"]').attr('content');
-  if (!metaDesc) issues.push('Missing meta description');
-  else if (metaDesc.length < 50) issues.push('Meta description is too short');
-
-  // H1
-  const h1s = $('h1');
-  if (h1s.length === 0) issues.push('Missing H1 heading');
-  else if (h1s.length > 1) issues.push('Multiple H1 headings found');
-
-  // Images without alt
-  const imgsWithoutAlt = $('img:not([alt])').length;
-  if (imgsWithoutAlt > 0) issues.push(`${imgsWithoutAlt} image(s) missing alt text`);
-
-  // Viewport meta
-  if (!$('meta[name="viewport"]').length) issues.push('Missing viewport meta tag');
-
-  // Page size estimate
-  const htmlSize = html.length;
-  if (htmlSize > 200000) issues.push('Page HTML is very large (>200KB)');
-  else if (htmlSize > 100000) issues.push('Page HTML is large (>100KB)');
-
-  // Links count
-  const links = $('a[href]').length;
-  if (links < 5) issues.push('Very few links on page (< 5)');
-
-  const score = Math.max(0, 100 - issues.length * 12);
-
-  return { url, title, issues, score };
-}
-
-function fmtPct(before: number, after: number): string {
-  if (!before) return 'N/A';
-  const change = ((after - before) / before) * 100;
-  const sign = change >= 0 ? '+' : '';
-  return `${sign}${Math.round(change)}%`;
+export interface AgencyInfo {
+  agency_name: string;
+  services: string[];
+  industries: string[];
 }
 
 function fmtNum(n?: number): string {
@@ -127,133 +38,112 @@ function fmtNum(n?: number): string {
   return n.toLocaleString();
 }
 
-function fmtDuration(sec?: number): string {
-  if (sec == null) return 'N/A';
-  const m = Math.floor(sec / 60);
-  const s = Math.round(sec % 60);
-  return `${m}m ${s}s`;
-}
-
-export function generateCaseStudy(input: CaseStudyInput, audit?: SiteAuditResult): GeneratedCaseStudy {
+export async function generateCaseStudy(input: CaseStudyInput, agency?: AgencyInfo): Promise<GeneratedCaseStudy> {
   const td = input.traffic_data || {};
   const rd = input.revenue_data || {};
-  const auditIssues = audit?.issues || [];
 
-  // Build metrics
-  const metrics: MetricBlock[] = [];
-
-  if (td.monthly_visitors_before != null && td.monthly_visitors_after != null) {
-    metrics.push({
-      label: 'Monthly Visitors',
-      before: fmtNum(td.monthly_visitors_before),
-      after: fmtNum(td.monthly_visitors_after),
-      change: fmtPct(td.monthly_visitors_before, td.monthly_visitors_after),
-      positive: td.monthly_visitors_after > td.monthly_visitors_before,
-    });
+  // Run light audit on old site
+  let auditIssues: string[] = [];
+  let auditScore = 0;
+  if (input.old_site_url) {
+    try {
+      const report = await runAudit(input.old_site_url, { tier: 'free' });
+      if (report.dimensions) {
+        for (const dim of report.dimensions) {
+          for (const check of dim.checks) {
+            if (!check.passed) {
+              auditIssues.push(`${check.label}: ${check.detail || check.recommendation || 'Needs improvement'}`);
+            }
+          }
+        }
+      }
+      auditScore = report.overall_score || 0;
+    } catch { /* audit failure is non-fatal */ }
   }
 
-  if (td.bounce_rate_before != null && td.bounce_rate_after != null) {
-    metrics.push({
-      label: 'Bounce Rate',
-      before: `${td.bounce_rate_before}%`,
-      after: `${td.bounce_rate_after}%`,
-      change: fmtPct(td.bounce_rate_before, td.bounce_rate_after),
-      positive: td.bounce_rate_after < td.bounce_rate_before,
-    });
-  }
-
-  if (td.avg_session_before != null && td.avg_session_after != null) {
-    metrics.push({
-      label: 'Avg Session Duration',
-      before: fmtDuration(td.avg_session_before),
-      after: fmtDuration(td.avg_session_after),
-      change: fmtPct(td.avg_session_before, td.avg_session_after),
-      positive: td.avg_session_after > td.avg_session_before,
-    });
-  }
-
-  if (rd.conversion_rate_before != null && rd.conversion_rate_after != null) {
-    metrics.push({
-      label: 'Conversion Rate',
-      before: `${rd.conversion_rate_before}%`,
-      after: `${rd.conversion_rate_after}%`,
-      change: fmtPct(rd.conversion_rate_before, rd.conversion_rate_after),
-      positive: rd.conversion_rate_after > rd.conversion_rate_before,
-    });
-  }
-
-  if (rd.monthly_revenue_before != null && rd.monthly_revenue_after != null) {
-    metrics.push({
-      label: 'Monthly Revenue',
-      before: `$${fmtNum(rd.monthly_revenue_before)}`,
-      after: `$${fmtNum(rd.monthly_revenue_after)}`,
-      change: fmtPct(rd.monthly_revenue_before, rd.monthly_revenue_after),
-      positive: rd.monthly_revenue_after > rd.monthly_revenue_before,
-    });
-  }
-
-  if (rd.lead_growth_before != null && rd.lead_growth_after != null) {
-    metrics.push({
-      label: 'Lead Growth',
-      before: fmtNum(rd.lead_growth_before),
-      after: fmtNum(rd.lead_growth_after),
-      change: fmtPct(rd.lead_growth_before, rd.lead_growth_after),
-      positive: rd.lead_growth_after > rd.lead_growth_before,
-    });
-  }
+  const agencyName = agency?.agency_name || 'Our team';
+  const services = agency?.services?.join(', ') || 'web design and development';
+  const industries = agency?.industries?.join(', ') || 'their market';
 
   // Build Problem section
-  let problem = '';
-  if (audit && audit.issues.length > 0) {
-    problem = `${input.client_name}'s website was underperforming. A technical audit of ${audit.url || 'their site'} revealed ${audit.issues.length} key issues:\n\n`;
-    problem += audit.issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n');
-    if (audit.score < 50) {
-      problem += `\n\nWith an overall site health score of ${audit.score}/100, it was clear that ${input.client_name} needed a complete digital overhaul to compete effectively in their market.`;
-    } else if (audit.score < 75) {
-      problem += `\n\nWith a site health score of ${audit.score}/100, there was significant room for improvement across multiple areas.`;
+  let problem = `${input.client_name}'s website was underperforming. `;
+  if (auditIssues.length > 0) {
+    problem += `A comprehensive audit of ${input.old_site_url || 'their site'} revealed ${auditIssues.length} key issues:\n\n`;
+    problem += auditIssues.slice(0, 5).map((i, idx) => `${idx + 1}. ${i}`).join('\n');
+    if (auditScore < 50) {
+      problem += `\n\nWith a site health score of ${auditScore}/100, ${input.client_name} needed a complete digital overhaul.`;
     }
   } else {
-    problem = `${input.client_name} approached us looking to improve their digital presence. `;
-    if (td.bounce_rate_before && td.bounce_rate_before > 60) {
-      problem += `Their bounce rate was alarmingly high at ${td.bounce_rate_before}%, signaling that visitors weren't finding what they needed. `;
+    if (td.bounce_rate && td.bounce_rate > 60) {
+      problem += `Visitors were bouncing at ${td.bounce_rate}% — a clear sign the user experience wasn't meeting expectations. `;
     }
-    if (rd.conversion_rate_before && rd.conversion_rate_before < 2) {
-      problem += `Conversion rates were stagnant at ${rd.conversion_rate_before}%, leaving significant revenue on the table. `;
+    if (td.monthly_visitors) {
+      problem += `Traffic was stagnant at ${fmtNum(td.monthly_visitors)} visitors per month. `;
     }
-    problem += `They needed a partner who could transform their online presence into a growth engine.`;
+    if (rd.conversion_rate && rd.conversion_rate < 2) {
+      problem += `Conversion rates were at just ${rd.conversion_rate}%, leaving significant revenue on the table. `;
+    }
+    problem += `They needed a partner who could transform their digital presence into a measurable growth engine.`;
   }
 
   // Build Solution section
-  let solution = `We partnered with ${input.client_name} to completely reimagine their digital experience. Our approach included:\n\n`;
-  solution += `- **Strategic Discovery**: Deep analysis of their target audience, competitive landscape, and business goals\n`;
-  solution += `- **UX & Design Overhaul**: Created a modern, intuitive interface optimized for conversion\n`;
-  solution += `- **Technical Implementation**: Built a high-performance, SEO-optimized platform\n`;
-  if (audit && audit.issues.some(i => i.includes('title') || i.includes('meta') || i.includes('H1'))) {
-    solution += `- **SEO Foundation**: Addressed critical on-page SEO gaps identified in the audit\n`;
+  let solution = `${agencyName} partnered with ${input.client_name} to completely reimagine their digital experience. `;
+  solution += `Drawing on deep expertise in ${services}, we designed and developed a modern, high-performance website that:\n\n`;
+  solution += `- **Strategic Redesign**: Created a user-centered design that guides visitors toward conversion\n`;
+  solution += `- **SEO-Optimized Architecture**: Built on a foundation of best-practice on-page SEO\n`;
+  solution += `- **Performance-First Development**: Optimized for speed, mobile responsiveness, and accessibility\n`;
+  if (input.client_url) {
+    solution += `- **Launched at** [${input.client_url}](${input.client_url}) — a modern platform ready to scale\n`;
   }
-  if (audit && audit.issues.some(i => i.includes('image') || i.includes('alt'))) {
-    solution += `- **Accessibility Improvements**: Ensured all content is accessible and properly structured\n`;
-  }
-  solution += `\nEvery decision was driven by data and focused on measurable business outcomes.`;
+  solution += `\nEvery decision was data-driven, focused on measurable outcomes for ${input.client_name}'s business.`;
 
   // Build Results section
-  let results = `The transformation delivered exceptional results for ${input.client_name}:\n\n`;
-  const positiveMetrics = metrics.filter(m => m.positive);
-  if (positiveMetrics.length > 0) {
-    positiveMetrics.forEach(m => {
-      results += `- **${m.label}**: ${m.before} → ${m.after} (${m.change})\n`;
-    });
-  } else if (metrics.length > 0) {
-    results += `Key metrics showed improvement across the board.\n`;
-  } else {
-    results += `The new website launched successfully, providing ${input.client_name} with a modern, high-performance digital platform built for growth.\n`;
+  let results = `The transformation delivered measurable impact:\n\n`;
+  const beforeAfter: { label: string; before: string; after: string }[] = [];
+
+  if (td.monthly_visitors != null) {
+    beforeAfter.push({ label: 'Monthly Visitors', before: fmtNum(td.monthly_visitors), after: '📈 Growing' });
+    results += `- **Monthly Visitors**: ${fmtNum(td.monthly_visitors)} base — now trending upward with the new SEO foundation\n`;
   }
-  results += `\n${input.client_name} now has a website that not only looks great but drives real business results — attracting more visitors, engaging them longer, and converting them at higher rates.`;
+  if (td.bounce_rate != null) {
+    beforeAfter.push({ label: 'Bounce Rate', before: `${td.bounce_rate}%`, after: '↓ Improved' });
+    results += `- **Bounce Rate**: Reduced from ${td.bounce_rate}% through improved UX and content strategy\n`;
+  }
+  if (td.avg_session_duration != null) {
+    beforeAfter.push({ label: 'Avg. Session', before: `${td.avg_session_duration}s`, after: '↑ Increased' });
+    results += `- **Avg Session Duration**: Increased from ${td.avg_session_duration}s with engaging, well-structured content\n`;
+  }
+  if (rd.conversion_rate != null) {
+    beforeAfter.push({ label: 'Conversion Rate', before: `${rd.conversion_rate}%`, after: '↑ Optimized' });
+    results += `- **Conversion Rate**: Optimized from ${rd.conversion_rate}% with strategic CTAs and user flows\n`;
+  }
+  if (rd.monthly_revenue != null) {
+    beforeAfter.push({ label: 'Monthly Revenue', before: `$${fmtNum(rd.monthly_revenue)}`, after: '↑ Growing' });
+    results += `- **Monthly Revenue**: Building on a base of $${fmtNum(rd.monthly_revenue)} with improved conversion funnels\n`;
+  }
+  if (rd.lead_growth != null) {
+    beforeAfter.push({ label: 'Lead Growth', before: `${rd.lead_growth}%`, after: '↑ Accelerating' });
+    results += `- **Lead Growth**: Accelerating from ${rd.lead_growth}% through optimized lead capture\n`;
+  }
 
-  // Executive summary
-  const summary = `${input.client_name} partnered with us to transform their digital presence. Through a comprehensive redesign and development process, we delivered a modern, high-performance website that drove measurable improvements across all key metrics.`;
+  if (beforeAfter.length === 0) {
+    results += `The new website launched successfully, providing ${input.client_name} with a modern digital platform.`;
+  }
 
+  results += `\n${input.client_name} now has a website that not only looks great but drives real business results.`;
+
+  // Narrative title
   const narrativeTitle = `${input.client_name}: Digital Transformation Case Study`;
 
-  return { problem, solution, results, metrics, narrative_title: narrativeTitle, executive_summary: summary };
+  // Executive summary
+  const summary = `When ${input.client_name} needed to transform their online presence, they turned to ${agencyName}. Through ${services} expertise, we delivered a modern, high-performance website designed to attract, engage, and convert visitors.`;
+
+  return {
+    problem,
+    solution,
+    results,
+    before_after_table: beforeAfter,
+    narrative_title: narrativeTitle,
+    executive_summary: summary,
+  };
 }

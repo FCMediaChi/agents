@@ -29,17 +29,9 @@ export interface GeneratedCaseStudy {
   problem: string;
   solution: string;
   results: string;
-  metrics: MetricBlock[];
+  before_after_table: { label: string; before: string; after: string }[];
   narrative_title: string;
   executive_summary: string;
-}
-
-export interface MetricBlock {
-  label: string;
-  before: string;
-  after: string;
-  change: string;
-  positive: boolean;
 }
 
 export interface PipelineCaseStudy {
@@ -77,12 +69,16 @@ export const pipelineApi = {
   caseStudies: {
     list: () => request<{ case_studies: PipelineCaseStudy[] }>('/case-studies'),
     get: (id: string) => request<{ case_study: PipelineCaseStudy }>(`/case-studies/${id}`),
-    create: (data: { client_name: string; client_url?: string; old_site_url?: string; traffic_data?: any; revenue_data?: any; screenshots?: string[] }) =>
+    create: (data: FormData) =>
+      fetch('/api/pipeline/case-studies', { method: 'POST', credentials: 'include', body: data }).then(r => { if (!r.ok) throw new Error('Failed'); return r.json(); }),
+    createJson: (data: { client_name: string; client_url?: string; old_site_url?: string; traffic_data?: any; revenue_data?: any }) =>
       request<{ case_study: PipelineCaseStudy }>('/case-studies', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: any) =>
       request<{ case_study: PipelineCaseStudy }>(`/case-studies/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     generate: (id: string) =>
       request<{ case_study: PipelineCaseStudy }>(`/case-studies/${id}/generate`, { method: 'POST' }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/case-studies/${id}`, { method: 'DELETE' }),
   },
   pitches: {
     list: () => request<{ pitches: PipelinePitch[] }>('/pitches'),

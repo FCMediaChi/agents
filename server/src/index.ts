@@ -122,6 +122,9 @@ async function main() {
   const distPath = path.resolve(__dirname, '../../dist');
   app.use(express.static(distPath));
 
+  // Serve pipeline screenshot uploads
+  app.use('/pipeline-uploads', express.static('/home/team/shared/pipeline-uploads'));
+
   // SPA fallback — serve index.html for any non-API route
   app.get('*', (_req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
