@@ -51,9 +51,23 @@ export interface PipelineCaseStudy {
   status: string; created_at: string;
 }
 
+export interface PitchFinding {
+  issue: string;
+  severity: 'critical' | 'warning' | 'suggestion';
+  why_matters: string;
+  fix: string;
+}
+
+export interface ColdEmailScript {
+  subject: string;
+  body: string;
+  signature: string;
+}
+
 export interface PipelinePitch {
   id: string; user_id: string; prospect_name: string; prospect_url: string | null;
-  audit_results: string | null; cold_email: string | null;
+  audit_results: { service?: string; findings?: PitchFinding[] } | null;
+  cold_email: ColdEmailScript | null;
   status: string; created_at: string;
 }
 
@@ -86,5 +100,12 @@ export const pipelineApi = {
   },
   pitches: {
     list: () => request<{ pitches: PipelinePitch[] }>('/pitches'),
+    get: (id: string) => request<{ pitch: PipelinePitch }>(`/pitches/${id}`),
+    create: (data: { prospect_name: string; prospect_url?: string; service?: string }) =>
+      request<{ pitch: PipelinePitch }>('/pitches', { method: 'POST', body: JSON.stringify(data) }),
+    analyze: (id: string) =>
+      request<{ pitch: PipelinePitch }>(`/pitches/${id}/analyze`, { method: 'POST' }),
+    delete: (id: string) =>
+      request<{ success: boolean }>(`/pitches/${id}`, { method: 'DELETE' }),
   },
 };
