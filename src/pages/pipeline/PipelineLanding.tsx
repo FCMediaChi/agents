@@ -152,7 +152,7 @@ export default function PipelineLanding() {
                 price: '$79',
                 period: '/mo',
                 yearly: '$758/yr',
-                features: ['Case study generator', 'Cold pitch builder', '10 case studies/mo', '20 pitches/mo', 'Email support'],
+                features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
                 cta: 'Get Started',
                 href: '#',
                 featured: false,
