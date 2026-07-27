@@ -1,4 +1,20 @@
 import { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from './lib/auth'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import SitemapBuilderPage from './pages/SitemapBuilderPage'
+import AuditPage from './pages/audit/AuditPage'
+import AccountPage from './pages/AccountPage'
+import ClientPortalPage from './pages/ClientPortalPage'
+import PipelineLanding from './pages/pipeline/PipelineLanding'
+import PipelineLogin from './pages/pipeline/PipelineLogin'
+import PipelineRegister from './pages/pipeline/PipelineRegister'
+import PipelineOnboarding from './pages/pipeline/PipelineOnboarding'
+import PipelineDashboard from './pages/pipeline/PipelineDashboard'
+import PipelineCaseStudy from './pages/pipeline/PipelineCaseStudy'
+import ColdPitchBuilder from './pages/pipeline/ColdPitchBuilder'
 import { 
   Compass, 
   Layers, 
@@ -12,7 +28,6 @@ import {
   Download, 
   Palette, 
   TrendingUp,
-  CheckCircle2,
   Lock
 } from 'lucide-react'
 
@@ -69,7 +84,21 @@ const SIMULATOR_TEMPLATES = {
   ]
 }
 
-export default function App() {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/pipeline/login" replace />;
+  return <>{children}</>;
+}
+
+function LandingPage() {
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")
@@ -80,7 +109,128 @@ export default function App() {
   const [brandSecondary, setBrandSecondary] = useState<string>("#4551D3")
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
   const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
-  const [isExported, setIsExported] = useState<boolean>(false)
+
+  function getWireframeBlocks(pageType: string): { title: string; subtitle: string; type: string }[] {
+        const blocks: Record<string, { title: string; subtitle: string; type: string }[]> = {
+          homepage: [
+            { title: 'Header', subtitle: 'Logo, navigation, primary CTA', type: 'header' },
+            { title: 'Hero Section', subtitle: 'Headline, subheadline, hero image', type: 'hero' },
+            { title: 'Feature Highlights', subtitle: 'Benefits grid with icons', type: 'features' },
+            { title: 'Testimonials', subtitle: 'Customer reviews carousel', type: 'testimonials' },
+            { title: 'CTA Banner', subtitle: 'Call-to-action with button', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          services: [
+            { title: 'Header', subtitle: 'Logo, navigation, service CTA', type: 'header' },
+            { title: 'Service Overview', subtitle: 'Intro paragraph and key stats', type: 'hero' },
+            { title: 'Services Grid', subtitle: 'Detailed offering cards with pricing', type: 'features' },
+            { title: 'Process Flow', subtitle: 'Step-by-step how it works', type: 'process' },
+            { title: 'CTA Section', subtitle: 'Book now / Get a quote', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          about: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Mission Statement', subtitle: 'Brand story and values', type: 'hero' },
+            { title: 'Team Section', subtitle: 'Team member cards', type: 'team' },
+            { title: 'Milestones', subtitle: 'Company timeline', type: 'timeline' },
+            { title: 'CTA', subtitle: 'Join our team / Contact us', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          contact: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Contact Form', subtitle: 'Name, email, message fields', type: 'form' },
+            { title: 'Info Section', subtitle: 'Address, phone, email, hours', type: 'info' },
+            { title: 'Map', subtitle: 'Embedded Google Maps', type: 'map' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+          pricing: [
+            { title: 'Header', subtitle: 'Logo, navigation', type: 'header' },
+            { title: 'Pricing Tiers', subtitle: 'Plan comparison cards', type: 'pricing' },
+            { title: 'FAQ', subtitle: 'Frequently asked questions', type: 'faq' },
+            { title: 'CTA', subtitle: 'Start free trial / Contact sales', type: 'cta' },
+            { title: 'Footer', subtitle: 'Contact info, links, copyright', type: 'footer' },
+          ],
+        };
+        return blocks[pageType] || blocks.homepage;
+      }
+
+      function generateProposalHTML(): string {
+        const pages = activePages.map((p: any) => {
+          const pageBlocks = getWireframeBlocks(p.type);
+          const blocksHtml = pageBlocks.map((b) => `
+            <div style="display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; margin-bottom: 4px;">
+              <span style="font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 6px; border-radius: 3px; min-width: 60px; text-align: center;">${b.type}</span>
+              <span style="font-size: 11px; color: #1e293b; font-weight: 600;">${b.title}</span>
+              <span style="font-size: 10px; color: #64748b;">— ${b.subtitle}</span>
+            </div>
+          `).join('');
+          return `
+            <div style="margin-bottom: 28px; page-break-inside: avoid;">
+              <h2 style="font-size: 16px; font-weight: 700; color: #1e293b; margin: 0 0 4px;">${p.title}</h2>
+              <div style="display: inline-block; font-size: 10px; font-weight: 600; color: ${brandPrimary}; background: ${brandPrimary}15; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px;">${p.type}</div>
+              ${p.description ? `<p style="font-size: 12px; color: #475569; margin: 4px 0; line-height: 1.5;"><strong>Description:</strong> ${p.description}</p>` : ''}
+              ${p.notes ? `<p style="font-size: 12px; color: #475569; margin: 4px 0 8px; line-height: 1.5;"><strong>Notes:</strong> ${p.notes}</p>` : ''}
+              <div style="margin-top: 8px; padding-left: 8px; border-left: 3px solid ${brandPrimary};">
+                <div style="font-size: 10px; font-weight: 700; color: ${brandPrimary}; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">Wireframe Blocks</div>
+                ${blocksHtml}
+              </div>
+            </div>
+          `;
+        }).join('');
+
+    const projectName = simulatorCategory === 'ecommerce' ? 'E-Commerce Shop'
+      : simulatorCategory === 'localbusiness' ? 'Local Plumber Service'
+      : 'Dashboard SaaS Platform';
+
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Nuria Website Blueprint Proposal — ${projectName}</title>
+<style>
+  @page { margin: 20mm 15mm; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; padding: 0; color: #1e293b; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cover { background: linear-gradient(135deg, ${brandPrimary}, ${brandSecondary}); color: white; padding: 60px 40px; text-align: center; }
+  .cover h1 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.5px; }
+  .cover .subtitle { font-size: 14px; opacity: 0.9; }
+  .cover .brand { font-size: 11px; opacity: 0.7; margin-top: 24px; }
+  .section { padding: 24px 40px; border-bottom: 1px solid #e2e8f0; }
+  .section h2 { font-size: 18px; color: ${brandPrimary}; margin: 0 0 16px; }
+  .page-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .estimate { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-top: 12px; }
+  .estimate .row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+  .estimate .total { border-top: 2px solid ${brandPrimary}; margin-top: 8px; padding-top: 8px; font-weight: 700; font-size: 15px; }
+  .print-btn { position: fixed; bottom: 20px; right: 20px; background: ${brandPrimary}; color: white; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  @media print { .print-btn { display: none; } }
+</style></head><body>
+  <div class="cover">
+    <h1>${projectName}</h1>
+    <div class="subtitle">Website Project Proposal</div>
+    <div class="brand">Prepared by ${brandingLogo} · Nuria Website Blueprint by First Creation Media</div>
+  </div>
+  <div class="section">
+    <h2>Executive Summary</h2>
+    <p style="font-size: 13px; line-height: 1.6; color: #475569;">This proposal outlines a comprehensive website plan for <strong>${projectName}</strong>, including a full sitemap structure, detailed page briefs, content questionnaires, wireframe layouts, and a pricing estimate. The project is designed to be build-ready, allowing your development team to proceed immediately with a clear roadmap.</p>
+  </div>
+  <div class="section">
+          <h2>Page Wireframes & Blocks</h2>
+          ${pages}
+  <div class="section">
+    <h2>Pricing Estimate</h2>
+    <div class="estimate">
+      <div class="row"><span>Strategy & Planning</span><span>$1,200</span></div>
+      <div class="row"><span>Design (UI/UX)</span><span>$2,400</span></div>
+      <div class="row"><span>Development</span><span>$3,600</span></div>
+      <div class="row"><span>Content Creation</span><span>$800</span></div>
+      <div class="row"><span>Testing & QA</span><span>$600</span></div>
+      <div class="row total"><span>Total Estimated Investment</span><span>$8,600</span></div>
+    </div>
+    <p style="font-size: 11px; color: #94a3b8; margin-top: 12px;">* Estimates based on ${activePages.length}-page sitemap. Final pricing may vary based on scope.</p>
+  </div>
+  <div class="section" style="text-align: center; border-bottom: none;">
+    <p style="font-size: 13px; color: #64748b;">This proposal was generated by <strong style="color: ${brandPrimary};">Nuria Website Blueprint</strong></p>
+    <p style="font-size: 11px; color: #94a3b8;">${brandingLogo} · First Creation Media</p>
+  </div>
+  <button class="print-btn" onclick="window.print()">🖨️ Print / Save as PDF</button>
+</body></html>`;
+  }
 
   const activePages = SIMULATOR_TEMPLATES[simulatorCategory]
   const currentPage = activePages[selectedSimPage] || activePages[0]
@@ -91,17 +241,9 @@ export default function App() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-white shadow-md shadow-[#1A9EF2]/5 overflow-hidden p-1">
-              <img src="/logo-blue.png" alt="First Creation Media" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">
-                SiteBlueprint
-              </span>
-              <span className="hidden sm:inline-block ml-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-[#C3E8FF] text-[#1A9EF2]">
-                by First Creation Media
-              </span>
-            </div>
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">
+              Nuria Website Blueprint
+            </span>
           </div>
           
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
@@ -119,7 +261,7 @@ export default function App() {
               Sign In
             </a>
             <a 
-              href="#pricing" 
+              href="/register" 
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md hover:shadow-lg shadow-[#1A9EF2]/10"
             >
               Start Free
@@ -141,7 +283,7 @@ export default function App() {
             <div className="lg:col-span-7 text-center lg:text-left space-y-6">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#C3E8FF]/60 text-[#4551D3] text-sm font-semibold">
                 <Sparkles className="w-4 h-4 text-[#1A9EF2]" />
-                Introducing SiteBlueprint v1.0
+                Introducing Nuria Website Blueprint v1.0
               </div>
               
               <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -337,7 +479,7 @@ export default function App() {
                   <div className="w-12 h-12 rounded-lg bg-[#C3E8FF] text-[#4551D3] flex items-center justify-center font-bold text-xl">2</div>
                   <h3 className="text-xl font-bold text-slate-900">Avoid Costly Agency Overpricing</h3>
                   <p className="text-slate-600 text-sm leading-relaxed">
-                    Agencies often overprice abstract web concepts. When you bring a compiled SiteBlueprint PDF proposal including exact page schemas, briefs, and block mockups, you save up to 40% on design and development.
+                    Agencies often overprice abstract web concepts. When you bring a compiled Nuria Website Blueprint PDF proposal including exact page schemas, briefs, and block mockups, you save up to 40% on design and development.
                   </p>
                 </div>
                 <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-100 space-y-4">
@@ -430,12 +572,12 @@ export default function App() {
       <section id="simulator" className="py-20 bg-slate-100 border-y border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12 space-y-4">
-            <div className="text-xs font-bold text-[#1A9EF2] uppercase tracking-wider">Try SiteBlueprint Live</div>
+            <div className="text-xs font-bold text-[#1A9EF2] uppercase tracking-wider">Try Nuria Website Blueprint Live</div>
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
               Interactive Planning Simulator
             </h2>
             <p className="text-base text-slate-600">
-              Experience the absolute power of SiteBlueprint right here. Click a template type, browse the live sitemap, view dynamically generated questionnaires, adjust your custom agency branding, and preview your proposal.
+              Experience the absolute power of Nuria Website Blueprint right here. Click a template type, browse the live sitemap, view dynamically generated questionnaires, adjust your custom agency branding, and preview your proposal.
             </p>
           </div>
 
@@ -568,8 +710,8 @@ export default function App() {
                         {[
                           { file: '/logo-blue.png', name: 'Blue', bg: 'bg-[#C3E8FF]/20' },
                           { file: '/logo-navy.png', name: 'Navy', bg: 'bg-slate-100' },
-                          { file: '/logo-white.png', name: 'White', bg: 'bg-slate-800' },
-                          { file: '/logo-black.png', name: 'Black', bg: 'bg-slate-50' }
+                          { file: '/logo-white.png', name: 'Black', bg: 'bg-slate-800' },
+                          { file: '/logo-black.png', name: 'White', bg: 'bg-slate-50' }
                         ].map((logoItem) => (
                           <button
                             key={logoItem.file}
@@ -648,22 +790,6 @@ export default function App() {
                         Vector Sitemap
                       </span>
                     </div>
-
-                    {isExported && (
-                      <div className="absolute inset-0 bg-[#1A9EF2]/95 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-white animate-fade-in">
-                        <CheckCircle2 className="w-8 h-8 text-white mb-2" />
-                        <span className="text-xs font-bold">Vector PDF Exported!</span>
-                        <span className="text-[9px] text-[#C3E8FF] leading-relaxed mt-1">
-                          Downloaded successfully to client's download path.
-                        </span>
-                        <button 
-                          onClick={() => setIsExported(false)}
-                          className="mt-3 px-3 py-1 bg-white text-[#1A9EF2] rounded text-[10px] font-bold shadow-sm hover:bg-[#C3E8FF] transition-all"
-                        >
-                          Reset Simulation
-                        </button>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
@@ -671,7 +797,11 @@ export default function App() {
               {/* Action Button */}
               <button
                 onClick={() => {
-                  setIsExported(true);
+                  const win = window.open('', '_blank');
+                  if (win) {
+                    win.document.write(generateProposalHTML());
+                    win.document.close();
+                  }
                 }}
                 className="w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white shadow-md shadow-[#1A9EF2]/20 flex items-center justify-center gap-2 text-sm transition-all"
               >
@@ -749,135 +879,103 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-16 space-y-4">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900">
-              Pricing Options Built for Every Stage
+              Simple, Transparent Pricing
             </h2>
             <p className="text-lg text-slate-600">
-              Choose the license that matches your volume. No credit card required to start on our Free Tier.
+              Start free, upgrade when you need more. No credit card required.
             </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8 items-stretch max-w-6xl mx-auto">
+          <div className="grid lg:grid-cols-4 gap-6 items-stretch max-w-6xl mx-auto">
             
             {/* Free Tier */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Free Tier</h3>
-                  <p className="text-slate-500 text-sm mt-1">Perfect for entrepreneurs planning their first site</p>
-                </div>
-                
-                <div className="flex items-baseline text-slate-900">
-                  <span className="text-4xl font-extrabold tracking-tight">$0</span>
-                  <span className="ml-1 text-sm font-semibold text-slate-500">/ forever</span>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <ul className="space-y-3.5">
-                    {[
-                      "1 Active Web Project",
-                      "Visual Sitemap Tree Builder (Up to 10 pages)",
-                      "Page Objectives & Copy Outlines",
-                      "Standard Client Discovery Surveys",
-                      "Interactive Wireframe Canvas Preview"
-                    ].map((feat) => (
-                      <li key={feat} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
+              <div className="mb-5">
+                <h3 className="text-lg font-extrabold text-slate-900">Free</h3>
+                <p className="text-slate-500 text-xs mt-1">For exploring the tool</p>
+                <div className="mt-3">
+                  <span className="text-3xl font-extrabold">$0</span>
+                  <span className="text-xs text-slate-400 ml-1">/ forever</span>
                 </div>
               </div>
-
-              <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm">
-                  Get Started Free
-                </button>
-              </div>
+              <ul className="space-y-2 mb-6 flex-1 text-xs">
+                {["1 project (lifetime)", "1 user seat", "Sitemap builder", "Page outlines", "Basic wireframe blocks", "Content questionnaires"].map(f => (
+                  <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
+              <a href="/register" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
+                Get Started Free
+              </a>
             </div>
 
-            {/* One-Time Plan */}
-            <div className="bg-white rounded-3xl p-8 border-2 border-[#1A9EF2] shadow-xl flex flex-col justify-between relative overflow-hidden">
-              <div className="absolute top-0 right-0 bg-[#1A9EF2] text-white text-[10px] font-bold tracking-wider uppercase px-4 py-1.5 rounded-bl-xl">
-                Best Value for Builders
-              </div>
-              
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-xl font-extrabold text-slate-900">One-Time License</h3>
-                    <span className="px-2 py-0.5 rounded bg-[#C3E8FF] text-[#1A9EF2] text-xs font-bold">POPULAR</span>
-                  </div>
-                  <p className="text-slate-500 text-sm mt-1">For freelancers, individual builders, and designers</p>
-                </div>
-                
-                <div className="flex items-baseline text-slate-900">
-                  <span className="text-4xl font-extrabold tracking-tight">$149</span>
-                  <span className="ml-1 text-sm font-semibold text-slate-500">/ one-time pay</span>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <ul className="space-y-3.5">
-                    {[
-                      "Unlimited Web Projects",
-                      "Unlimited Sitemap nesting & sorting",
-                      "Custom branding colors and agency logo settings",
-                      "Full, high-resolution vector PDF proposal exports",
-                      "Advanced Wireframe blocks and customization",
-                      "1 year of free updates & priority downloads"
-                    ].map((feat) => (
-                      <li key={feat} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span className="font-medium text-slate-800">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
+            {/* Solo Tier */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
+              <div className="mb-5">
+                <h3 className="text-lg font-extrabold text-slate-900">Solo</h3>
+                <p className="text-slate-500 text-xs mt-1">For freelance designers</p>
+                <div className="mt-3">
+                  <span className="text-3xl font-extrabold">$59</span>
+                  <span className="text-xs text-slate-400 ml-1">/ month</span>
                 </div>
               </div>
-
-              <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] text-white transition-all text-sm shadow-md shadow-[#1A9EF2]/10">
-                  Purchase License
-                </button>
-              </div>
+              <ul className="space-y-2 mb-6 flex-1 text-xs">
+                {["5 projects per month", "1 user seat", "Advanced wireframe blocks (50+)", "PDF proposal export", "Custom proposal branding", "Email support"].map(f => (
+                  <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
+              <a href="https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
+                Start Monthly
+              </a>
+              <a href="https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
+                Pay Yearly ($566)
+              </a>
             </div>
 
-            {/* Subscription Plan */}
-            <div className="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm flex flex-col justify-between relative overflow-hidden">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl font-extrabold text-slate-900">Agency Subscription</h3>
-                  <p className="text-slate-500 text-sm mt-1">For growing marketing teams, agencies, and builders</p>
-                </div>
-                
-                <div className="flex items-baseline text-slate-900">
-                  <span className="text-4xl font-extrabold tracking-tight">$29</span>
-                  <span className="ml-1 text-sm font-semibold text-slate-500">/ month</span>
-                </div>
-
-                <div className="border-t border-slate-100 pt-6">
-                  <ul className="space-y-3.5">
-                    {[
-                      "Unlimited Web Projects with full scale sitemaps",
-                      "Everything included in the One-Time purchase plan",
-                      "Collaborative teammate workspaces (Coming Soon)",
-                      "Multi-client portal PDF export themes",
-                      "Priority 24-hour Email & Chat Support desk"
-                    ].map((feat) => (
-                      <li key={feat} className="flex items-start gap-3 text-sm text-slate-600">
-                        <Check className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                        <span>{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
+            {/* Team Tier */}
+            <div className="bg-white rounded-2xl p-6 border-2 border-[#1A9EF2] shadow-lg shadow-[#1A9EF2]/10 flex flex-col relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-[10px] font-bold rounded-full whitespace-nowrap">Most Popular</div>
+              <div className="mb-5">
+                <h3 className="text-lg font-extrabold text-slate-900">Team</h3>
+                <p className="text-slate-500 text-xs mt-1">For small agencies</p>
+                <div className="mt-3">
+                  <span className="text-3xl font-extrabold">$149</span>
+                  <span className="text-xs text-slate-400 ml-1">/ month</span>
                 </div>
               </div>
+              <ul className="space-y-2 mb-6 flex-1 text-xs">
+                {["10 projects per month", "Up to 5 user seats", "Everything in Solo, plus:", "Invite team members & clients", "Client-facing portal", "Comment & approval workflow", "Interactive HTML export", "Google Docs / Word export", "Sitemap template library (10 industries)", "50+ wireframe block templates", "Industry-specific questionnaire bundles", "Priority support"].map(f => (
+                  <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Solo, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
+              <a href="https://buy.stripe.com/fZu7sLaYIa7q3EofiefAc09" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
+                Start Monthly
+              </a>
+              <a href="https://buy.stripe.com/28EdR99UE0wQdeY0nkfAc0a" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
+                Pay Yearly ($1,430)
+              </a>
+            </div>
 
-              <div className="pt-8">
-                <button className="w-full py-3.5 rounded-xl font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all text-sm">
-                  Subscribe Now
-                </button>
+            {/* Agency Tier */}
+            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
+              <div className="mb-5">
+                <h3 className="text-lg font-extrabold text-slate-900">Agency</h3>
+                <p className="text-slate-500 text-xs mt-1">For growing agencies</p>
+                <div className="mt-3">
+                  <span className="text-3xl font-extrabold">$297</span>
+                  <span className="text-xs text-slate-400 ml-1">/ month</span>
+                </div>
               </div>
+              <ul className="space-y-2 mb-6 flex-1 text-xs">
+                {["Unlimited projects", "Unlimited user seats", "Everything in Team, plus:", "API access (REST API + keys)", "Custom domain for client portals", "White-labeling (remove Nuria branding)", "Export to Webflow, WordPress & Framer", "Priority support"].map(f => (
+                  <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Team, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
+              <a href="https://buy.stripe.com/8x2cN55Eo6Veej20nkfAc0b" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all mb-1.5">
+                Start Monthly
+              </a>
+              <a href="https://buy.stripe.com/cNicN50k46Ve8YI2vsfAc0c" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
+                Pay Yearly ($2,580)
+              </a>
             </div>
 
           </div>
@@ -896,21 +994,21 @@ export default function App() {
             <div className="space-y-2">
               <h3 className="text-lg font-bold text-slate-900">How does the 1 active project limit on the Free tier work?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                The Free plan lets you create and fully outline, survey, and mock up one (1) single website blueprint at a time. If you need to plan a new client project, you can archive or delete the existing project, or upgrade to our Premium plan to create unlimited concurrent maps.
+                The Free plan lets you create and fully outline, survey, and mock up one (1) single website blueprint at a time. If you need to plan more projects, upgrade to Solo ($59/mo) for 5 projects/month or Team ($149/mo) for 10 projects/month.
               </p>
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-lg font-bold text-slate-900">What makes SiteBlueprint PDF exports unique?</h3>
+              <h3 className="text-lg font-bold text-slate-900">What makes Nuria Website Blueprint PDF exports unique?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                SiteBlueprint exports beautiful, agency-branded, vector-based PDF files. Rather than just screenshotting cards, the export compiles the entire sitemap tree, individual page briefs, and visual layouts into an elegant, unified project proposal document with your agency's logo and primary colors.
+                Nuria Website Blueprint exports beautiful, agency-branded, vector-based PDF files. Rather than just screenshotting cards, the export compiles the entire sitemap tree, individual page briefs, and visual layouts into an elegant, unified project proposal document with your agency's logo and primary colors.
               </p>
             </div>
 
             <div className="space-y-2">
               <h3 className="text-lg font-bold text-slate-900">Do my clients need accounts to answer content questionnaires?</h3>
               <p className="text-slate-600 text-sm leading-relaxed">
-                No, they do not. With premium plans, you can share a clean, client-facing survey link where they can type their copy briefs directly. The answers automatically map back and update in your page sitemap and wireframe grids.
+                No, they do not. With paid plans, you can share a clean, client-facing survey link where they can type their copy briefs directly. The answers automatically map back and update in your page sitemap and wireframe grids.
               </p>
             </div>
           </div>
@@ -924,7 +1022,7 @@ export default function App() {
             <div className="w-8 h-8 rounded-lg bg-[#1A9EF2] flex items-center justify-center text-white font-bold">
               <Compass className="w-5 h-5" />
             </div>
-            <span className="text-lg font-bold">SiteBlueprint</span>
+            <span className="text-lg font-bold">Nuria Website Blueprint</span>
           </div>
           
           <p className="text-sm max-w-md mx-auto">
@@ -938,4 +1036,32 @@ export default function App() {
       </footer>
     </div>
   )
+}
+
+export default function App() {
+  const { user } = useAuth();
+
+  return (
+    <Routes>
+      <Route path="/audit" element={<AuditPage />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
+      <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
+      <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
+      <Route path="/app/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+      <Route path="/project/:projectId/client" element={<ClientPortalPage />} />
+
+      {/* Pipeline routes */}
+      <Route path="/pipeline" element={<PipelineLanding />} />
+      <Route path="/pipeline/login" element={<PipelineLogin />} />
+      <Route path="/pipeline/register" element={<PipelineRegister />} />
+      <Route path="/pipeline/onboarding" element={<PipelineProtectedRoute><PipelineOnboarding /></PipelineProtectedRoute>} />
+      <Route path="/pipeline/dashboard" element={<PipelineProtectedRoute><PipelineDashboard /></PipelineProtectedRoute>} />
+      <Route path="/pipeline/case-study" element={<PipelineProtectedRoute><PipelineCaseStudy /></PipelineProtectedRoute>} />
+      <Route path="/pipeline/cold-pitch" element={<PipelineProtectedRoute><ColdPitchBuilder /></PipelineProtectedRoute>} />
+
+      <Route path="*" element={<LandingPage />} />
+    </Routes>
+  );
 }
