@@ -30,10 +30,12 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
 
   const id = uuidv4();
   const passwordHash = bcrypt.hashSync(password, 10);
+  const now = new Date().toISOString();
+  const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   db.prepare(
-    'INSERT INTO users (id, email, password_hash, subscription_tier) VALUES (?, ?, ?, ?)'
-  ).run(id, email, passwordHash, 'FREE');
+    'INSERT INTO users (id, email, password_hash, subscription_tier, trial_started_at, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, email, passwordHash, 'FREE', now, trialEnds);
 
   const token = jwt.sign(
     { userId: id, email, subscriptionTier: 'FREE' },
@@ -52,6 +54,8 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
     id,
     email,
     subscription_tier: 'FREE',
+    trial_started_at: now,
+    trial_ends_at: trialEnds,
   });
 });
 

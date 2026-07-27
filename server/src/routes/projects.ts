@@ -4,7 +4,8 @@ import { getDb } from '../db.js';
 import { CreateProjectSchema, UpdateProjectSchema } from '../schemas/projects.js';
 import { AuthenticatedRequest, Project } from '../types.js';
 import { authenticate } from '../middleware/auth.js';
-import { checkProjectLimit, requirePaidTier } from '../middleware/projectLimit.js';
+import { checkProjectLimit, requirePaidTier, incrementProjectCount } from '../middleware/projectLimit.js';
+import { projectCreateCooldown } from '../middleware/abuseProtection.js';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response): void => {
 });
 
 // POST /api/projects
-router.post('/', checkProjectLimit, (req: AuthenticatedRequest, res: Response): void => {
+router.post('/', projectCreateCooldown, checkProjectLimit, (req: AuthenticatedRequest, res: Response): void => {
   const parsed = CreateProjectSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
@@ -45,6 +46,9 @@ router.post('/', checkProjectLimit, (req: AuthenticatedRequest, res: Response): 
   db.prepare(
     'INSERT INTO projects (id, user_id, title, description) VALUES (?, ?, ?, ?)'
   ).run(id, req.user!.userId, title, description ?? null);
+
+  // Increment monthly project counter for paid tiers
+  incrementProjectCount(req.user!.userId, req.user!.subscriptionTier || 'FREE');
 
   const project = db.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project;
 
@@ -106,7 +110,7 @@ router.put('/:id', (req: AuthenticatedRequest, res: Response): void => {
   if ((data.branding_logo_url !== undefined || data.branding_primary_color !== undefined || data.branding_secondary_color !== undefined) && req.user!.subscriptionTier !== 'PAID') {
     res.status(403).json({
       error: 'Premium Feature',
-      message: 'Custom branding is exclusive to TheBlueprint Premium. Please upgrade your plan.',
+      message: 'Custom branding is exclusive to Nuria Website Blueprint Premium. Please upgrade your plan.',
     });
     return;
   }
@@ -155,6 +159,86 @@ router.delete('/:id', (req: AuthenticatedRequest, res: Response): void => {
 
   db.prepare('DELETE FROM projects WHERE id = ?').run(req.params.id);
   res.json({ success: true });
+});
+
+// ── Project Collaboration ─────────────────────────────────────
+
+// GET /api/projects/:id/members
+router.get('/:id/members', (req: AuthenticatedRequest, res: Response): void => {
+  const db = getDb();
+  const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(req.params.id) as any;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (project.user_id !== req.user!.userId) { res.status(403).json({ error: 'Access denied' }); return; }
+
+  const members = db.prepare('SELECT id, email, role, status, invited_at FROM project_members WHERE project_id = ?').all(req.params.id);
+  res.json({ members: members || [] });
+});
+
+// POST /api/projects/:id/invite — invite a collaborator
+router.post('/:id/invite', (req: AuthenticatedRequest, res: Response): void => {
+  const { email, role } = req.body;
+  if (!email) { res.status(400).json({ error: 'Email is required' }); return; }
+
+  const db = getDb();
+  const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(req.params.id) as any;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (project.user_id !== req.user!.userId) { res.status(403).json({ error: 'Only the project owner can invite members' }); return; }
+
+  const validRoles = ['editor', 'client'];
+  const memberRole = validRoles.includes(role) ? role : 'editor';
+
+  const existing = db.prepare('SELECT id FROM project_members WHERE project_id = ? AND email = ?').get(req.params.id, email.toLowerCase().trim());
+  if (existing) { res.status(409).json({ error: 'Already invited' }); return; }
+
+  const id = crypto.randomUUID();
+  const token = crypto.randomBytes(16).toString('hex');
+  db.prepare('INSERT INTO project_members (id, project_id, email, role, access_token, status) VALUES (?, ?, ?, ?, ?, ?)').run(id, req.params.id, email.toLowerCase().trim(), memberRole, token, 'invited');
+
+  res.status(201).json({ id, email: email.toLowerCase().trim(), role: memberRole, status: 'invited', accessToken: token });
+});
+
+// DELETE /api/projects/:id/members/:memberId
+router.delete('/:id/members/:memberId', (req: AuthenticatedRequest, res: Response): void => {
+  const db = getDb();
+  const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(req.params.id) as any;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+  if (project.user_id !== req.user!.userId) { res.status(403).json({ error: 'Access denied' }); return; }
+
+  db.prepare('DELETE FROM project_members WHERE id = ? AND project_id = ?').run(req.params.memberId, req.params.id);
+  res.json({ success: true });
+});
+
+// GET /api/projects/:id/client-view?token=xxx — client portal access
+router.get('/:id/client-view', (req: Request, res: Response): void => {
+  const db = getDb();
+  const token = req.query.token as string;
+  if (!token) { res.status(401).json({ error: 'Access token required' }); return; }
+
+  const member = db.prepare('SELECT * FROM project_members WHERE project_id = ? AND access_token = ?').get(req.params.id, token) as any;
+  if (!member) { res.status(403).json({ error: 'Invalid access token' }); return; }
+
+  const project = db.prepare('SELECT id, title, description, branding_primary_color, branding_secondary_color FROM projects WHERE id = ?').get(req.params.id) as any;
+  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
+
+  const pages = db.prepare('SELECT * FROM pages WHERE project_id = ? ORDER BY sort_order').all(req.params.id) as any[];
+  const isClient = member.role === 'client';
+
+  // For each page, get questionnaires
+  const pagesWithData = pages.map((p: any) => {
+    const q = db.prepare('SELECT questions, answers FROM questionnaires WHERE page_id = ?').get(p.id) as any;
+    return {
+      ...p,
+      questionnaire: q ? { questions: JSON.parse(q.questions || '[]'), answers: q.answers ? JSON.parse(q.answers) : {} } : null,
+    };
+  });
+
+  res.json({
+    project: { id: project.id, title: project.title, description: project.description,
+      branding_primary_color: project.branding_primary_color, branding_secondary_color: project.branding_secondary_color },
+    member: { role: member.role, email: member.email },
+    isClient,
+    pages: pagesWithData,
+  });
 });
 
 export default router;

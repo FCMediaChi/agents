@@ -149,7 +149,7 @@ const PLANS = [
   { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', href: '#audit-form', featured: false },
   { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', href: STRIPE_SINGLE, featured: false },
   { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Up to 5 user seats', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
-  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
+  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Reports history', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
 ];
 
 export default function AuditPage() {

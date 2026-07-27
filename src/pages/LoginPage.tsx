@@ -33,7 +33,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">Welcome back</h1>
-          <p className="text-slate-500 text-sm mt-1">Sign in to your TheBlueprint account</p>
+          <p className="text-slate-500 text-sm mt-1">Sign in to your Nuria Website Blueprint account</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">

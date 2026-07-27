@@ -3,6 +3,7 @@ import { getDb, getRawDb } from '../../server/src/db.js';
 import { runAudit } from '../engine/index.js';
 import { runAuditSchema } from '../schemas/audit.js';
 import crypto from 'crypto';
+import { auditIPRateLimit, singleAuditQueue, auditCooldown, auditURLBlacklist } from '../../server/src/middleware/abuseProtection.js';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ function checkAuditLimit(userId: string): { allowed: boolean; message?: string }
 }
 
 // POST /api/audit/run
-router.post('/run', async (req: Request, res: Response) => {
+router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLBlacklist, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     if (!user) return res.status(401).json({ error: 'Authentication required' });
