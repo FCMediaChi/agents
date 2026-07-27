@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api, type Page } from '../lib/api';
-import { Save, Loader2, FileText, Printer } from 'lucide-react';
+import { Save, Loader2, FileText, Printer, Download, Upload } from 'lucide-react';
 
 interface Props {
   projectId: string | null;
@@ -16,6 +16,7 @@ export default function ProposalView({ projectId, pages }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     if (!projectId) return;
@@ -62,6 +63,33 @@ export default function ProposalView({ projectId, pages }: Props) {
     }
   };
 
+  const handleExportWord = async () => {
+    if (!projectId) return;
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/proposal/export-doc`, { method: 'POST', credentials: 'include' });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'proposal.doc'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { /* ignore */ }
+    finally { setExporting(false); }
+  };
+
+  const handlePlatformExport = async (platform: string) => {
+    if (!projectId) return;
+    setExporting(true);
+    const ext = platform === 'webflow' ? 'csv' : platform === 'wordpress' ? 'xml' : 'json';
+    try {
+      const res = await fetch(`/api/projects/${projectId}/export/${platform}`, { method: 'POST', credentials: 'include' });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = `${platform}-export.${ext}`; a.click();
+      URL.revokeObjectURL(url);
+    } catch {}
+    finally { setExporting(false); }
+  };
+
   const handleExport = () => {
     const printWin = window.open('', '_blank');
     if (!printWin) return;
@@ -80,7 +108,7 @@ export default function ProposalView({ projectId, pages }: Props) {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>${clientName || 'Proposal'} - TheBlueprint</title>
+        <title>${clientName || 'Proposal'} - Nuria Website Blueprint</title>
         <style>
           @page { margin: 1.5cm; }
           body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #111; background: #fff; line-height: 1.6; padding: 20px; }
@@ -148,13 +176,30 @@ export default function ProposalView({ projectId, pages }: Props) {
           <FileText className="w-5 h-5 text-[#1A9EF2]" />
           Proposal
         </h2>
-        <button
-          onClick={handleExport}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] text-white font-semibold text-sm hover:opacity-90 transition-all"
-        >
-          <Printer className="w-4 h-4" />
-          Export PDF
-        </button>
+        <div className="flex gap-2">
+          <button onClick={handleExportWord} disabled={exporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white border border-[#1A9EF2] text-[#1A9EF2] font-semibold text-sm hover:bg-[#C3E8FF]/20 transition-all disabled:opacity-50">
+            {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Export Word
+          </button>
+          <button onClick={() => handlePlatformExport('webflow')} disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 font-semibold text-xs hover:border-[#1A9EF2] hover:text-[#1A9EF2] transition-all disabled:opacity-50">
+            <Upload className="w-3.5 h-3.5" /> Webflow
+          </button>
+          <button onClick={() => handlePlatformExport('wordpress')} disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 font-semibold text-xs hover:border-[#1A9EF2] hover:text-[#1A9EF2] transition-all disabled:opacity-50">
+            <Upload className="w-3.5 h-3.5" /> WordPress
+          </button>
+          <button onClick={() => handlePlatformExport('framer')} disabled={exporting}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-600 font-semibold text-xs hover:border-[#1A9EF2] hover:text-[#1A9EF2] transition-all disabled:opacity-50">
+            <Upload className="w-3.5 h-3.5" /> Framer
+          </button>
+          <button onClick={handleExport}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] text-white font-semibold text-sm hover:opacity-90 transition-all">
+            <Printer className="w-4 h-4" />
+            Export PDF
+          </button>
+        </div>
       </div>
 
       <div className="p-6 space-y-5">

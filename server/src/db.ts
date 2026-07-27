@@ -107,10 +107,15 @@ function initializeSchema(): void {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       subscription_tier TEXT NOT NULL DEFAULT 'FREE',
+      trial_started_at TEXT,
+      trial_ends_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Add trial columns if users table existed before this migration
+  try { db.run('ALTER TABLE users ADD COLUMN trial_started_at TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN trial_ends_at TEXT'); } catch { /* already exists */ }
 
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (
@@ -238,6 +243,169 @@ function initializeSchema(): void {
     )
   `);
 
+  // Team membership
+  db.run(`
+    CREATE TABLE IF NOT EXISTS team_members (
+      id TEXT PRIMARY KEY,
+      account_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'member',
+      status TEXT NOT NULL DEFAULT 'invited',
+      invited_at TEXT NOT NULL DEFAULT (datetime('now')),
+      accepted_at TEXT,
+      FOREIGN KEY (account_id) REFERENCES users(id)
+    )
+  `);
+
+  // White-label settings for agency users
+  db.run(`
+    CREATE TABLE IF NOT EXISTS whitelabel_settings (
+      user_id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      company_name TEXT,
+      logo_url TEXT,
+      primary_color TEXT DEFAULT '#1A9EF2',
+      secondary_color TEXT DEFAULT '#4551D3',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Monthly project counters for paid tier limits
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_monthly (
+      user_id TEXT NOT NULL,
+      month_key TEXT NOT NULL,
+      project_count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, month_key),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Project-level members for collaboration
+  db.run(`
+    CREATE TABLE IF NOT EXISTS project_members (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'editor',
+      access_token TEXT,
+      status TEXT NOT NULL DEFAULT 'invited',
+      invited_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )
+  `);
+  // Add access_token column if table was created before this migration
+  try { db.run('ALTER TABLE project_members ADD COLUMN access_token TEXT'); } catch { /* already exists */ }
+
+  // Wireframe comments
+  db.run(`
+    CREATE TABLE IF NOT EXISTS wireframe_comments (
+      id TEXT PRIMARY KEY,
+      wireframe_id TEXT NOT NULL,
+      block_id TEXT NOT NULL,
+      user_email TEXT NOT NULL,
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (wireframe_id) REFERENCES wireframes(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Wireframe approval status
+  try { db.run('ALTER TABLE wireframes ADD COLUMN approval_status TEXT DEFAULT \'draft\''); } catch { /* already exists */ }
+
+  // API keys for agency users
+  db.run(`
+    CREATE TABLE IF NOT EXISTS api_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      key_hash TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL DEFAULT 'Default',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      last_used_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Custom domains for agency users
+  db.run(`
+    CREATE TABLE IF NOT EXISTS custom_domains (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      domain TEXT NOT NULL UNIQUE,
+      verification_token TEXT NOT NULL,
+      verified INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      verified_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Blueprint white-label settings (separate from Audit whitelabel)
+  db.run(`
+    CREATE TABLE IF NOT EXISTS blueprint_whitelabel (
+      user_id TEXT PRIMARY KEY,
+      enabled INTEGER NOT NULL DEFAULT 0,
+      company_name TEXT,
+      logo_url TEXT,
+      primary_color TEXT DEFAULT '#1A9EF2',
+      secondary_color TEXT DEFAULT '#4551D3',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+
+  // Pipeline tables
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pipeline_agencies (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL UNIQUE,
+      agency_name TEXT NOT NULL,
+      website TEXT,
+      niche TEXT,
+      team_size TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pipeline_case_studies (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      agency_id TEXT,
+      client_name TEXT NOT NULL,
+      industry TEXT,
+      challenge TEXT,
+      solution TEXT,
+      results TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (agency_id) REFERENCES pipeline_agencies(id) ON DELETE SET NULL
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pipeline_pitches (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      agency_id TEXT,
+      prospect_name TEXT NOT NULL,
+      company_name TEXT,
+      industry TEXT,
+      pain_points TEXT,
+      proposed_solution TEXT,
+      status TEXT NOT NULL DEFAULT 'draft',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (agency_id) REFERENCES pipeline_agencies(id) ON DELETE SET NULL
+    )
+  `);
+
   // Create indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
@@ -248,7 +416,12 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_audit_reports_status ON audit_reports(status)',
     'CREATE INDEX IF NOT EXISTS idx_audit_dimensions_report_id ON audit_dimensions(report_id)',
     'CREATE INDEX IF NOT EXISTS idx_audit_checks_dimension_id ON audit_checks(dimension_id)',
-  ];
+    'CREATE INDEX IF NOT EXISTS idx_team_members_account_id ON team_members(account_id)',
+    'CREATE INDEX IF NOT EXISTS idx_team_members_email ON team_members(email)',
+    'CREATE INDEX IF NOT EXISTS idx_pipeline_agencies_user_id ON pipeline_agencies(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pipeline_case_studies_user_id ON pipeline_case_studies(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',
+    ];
   for (const idx of indexes) {
     try { db.run(idx); } catch { /* may already exist */ }
   }

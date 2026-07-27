@@ -5,6 +5,7 @@ import { getDb } from '../db.js';
 import { CreatePageSchema, UpdatePageSchema, UpdateOutlineSchema } from '../schemas/pages.js';
 import { AuthenticatedRequest, Page, Project } from '../types.js';
 import { authenticate } from '../middleware/auth.js';
+import { maxPageLimit } from '../middleware/abuseProtection.js';
 
 const router = Router({ mergeParams: true });
 
@@ -94,7 +95,7 @@ router.get('/:projectId/pages', (req: AuthenticatedRequest, res: Response): void
 });
 
 // POST /api/projects/:projectId/pages
-router.post('/:projectId/pages', (req: AuthenticatedRequest, res: Response): void => {
+router.post('/:projectId/pages', maxPageLimit, (req: AuthenticatedRequest, res: Response): void => {
   const { projectId } = req.params;
   if (!getProject(projectId, req.user!.userId)) {
     res.status(404).json({ error: 'Project not found' });
