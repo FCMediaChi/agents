@@ -79,7 +79,11 @@ export interface DashboardData {
 }
 
 export const pipelineApi = {
-  auth: { me: () => request<{ user: PipelineUser }>('/me') },
+  auth: {
+    me: () => request<{ user: PipelineUser }>('/me'),
+    login: (email: string, password: string) => request<{ user: PipelineUser }>('/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    register: (email: string, password: string) => request<{ user: PipelineUser }>('/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  },
   agency: {
     get: () => request<{ agency: PipelineAgency | null }>('/agency'),
     create: (data: { agency_name: string; website_url?: string; services?: string[]; industries?: string[] }) =>

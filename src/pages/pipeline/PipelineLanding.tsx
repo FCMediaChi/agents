@@ -138,19 +138,72 @@ export default function PipelineLanding() {
           </div>
           <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
             {[
-              { name: 'Free Trial', price: '$0', period: '7 days', features: ['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'], cta: 'Start Free', href: '/pipeline/register', featured: false },
-              { name: 'Solo', price: 'TBD', period: '/mo', features: ['Everything in Free', 'Unlimited case studies', 'Unlimited cold pitches', 'Custom branding'], cta: 'Coming Soon', href: '#', featured: false },
-              { name: 'Team', price: 'TBD', period: '/mo', features: ['Everything in Solo', 'Up to 5 team members', 'Shared templates', 'Priority support'], cta: 'Coming Soon', href: '#', featured: true },
-              { name: 'Agency', price: 'TBD', period: '/mo', features: ['Everything in Team', 'Unlimited team members', 'White-label exports', 'API access'], cta: 'Coming Soon', href: '#', featured: false },
-            ].map((plan, i) => (
+              {
+                name: 'Free Trial',
+                price: '$0',
+                period: '7 days',
+                features: ['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'],
+                cta: 'Start Free',
+                href: '/pipeline/register',
+                featured: false,
+              },
+              {
+                name: 'Solo',
+                price: '$79',
+                period: '/mo',
+                yearly: '$758/yr',
+                features: ['Case study generator', 'Cold pitch builder', '10 case studies/mo', '20 pitches/mo', 'Email support'],
+                cta: 'Get Started',
+                href: '#',
+                featured: false,
+              },
+              {
+                name: 'Team',
+                price: '$199',
+                period: '/mo',
+                yearly: '$1,910/yr',
+                features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
+                cta: 'Get Started',
+                href: '#',
+                featured: true,
+              },
+              {
+                name: 'Agency',
+                price: '$499',
+                period: '/mo',
+                yearly: 'Custom Pricing',
+                features: ['Everything in Team', 'White-labeling', 'API access', 'Custom yearly pricing', 'Dedicated support'],
+                cta: 'Get Started',
+                yearlyCta: 'Contact Us',
+                href: '#',
+                featured: false,
+              },
+            ].map((plan: any, i) => (
               <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
                 {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
                 <h3 className="text-lg font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="mb-4"><span className="text-3xl font-extrabold text-slate-900">{plan.price}</span><span className="text-slate-400 text-sm ml-1">{plan.period}</span></div>
+                <div className="mb-1">
+                  <span className="text-3xl font-extrabold text-slate-900">{plan.price}</span>
+                  <span className="text-slate-400 text-sm ml-1">{plan.period}</span>
+                </div>
+                {plan.yearly && (
+                  <p className="text-xs text-slate-400 mb-3">
+                    or{' '}
+                    {plan.yearlyCta ? (
+                      <a href={plan.href} className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
+                        {plan.yearlyCta}
+                      </a>
+                    ) : (
+                      <span className="text-slate-500">{plan.yearly}</span>
+                    )}
+                    {!plan.yearlyCta && ' when billed annually'}
+                  </p>
+                )}
+                {!plan.yearly && <div className="mb-4"></div>}
                 <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+                  {plan.features.map((f: string, j: number) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
                 </ul>
-                <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-slate-100 text-slate-500 cursor-not-allowed'}`}>{plan.cta}</a>
+                <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]'}`}>{plan.cta}</a>
               </div>
             ))}
           </div>

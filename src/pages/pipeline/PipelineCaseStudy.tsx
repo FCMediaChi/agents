@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, Loader2, ArrowRight, Check, ArrowLeft, Plus, Trash2, Edit3, Save, Sparkles, TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
-import { pipelineApi, type PipelineCaseStudy, type GeneratedCaseStudy } from '../../lib/pipelineApi';
+import { FileText, Loader2, Check, ArrowLeft, Plus, Trash2, Edit3, Save, Sparkles, TrendingUp } from 'lucide-react';
+import { pipelineApi, type PipelineCaseStudy } from '../../lib/pipelineApi';
 
 type Step = 'create' | 'generating' | 'result';
 

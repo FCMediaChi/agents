@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Loader2, Search, Mail, Copy, RefreshCw, Save, Plus, AlertTriangle, ChevronDown, ExternalLink, Check } from 'lucide-react';
+import { ArrowLeft, Loader2, Search, Mail, Copy, RefreshCw, Plus, AlertTriangle, ChevronDown, Check } from 'lucide-react';
 import { pipelineApi, type PipelinePitch, type PitchFinding, type ColdEmailScript } from '../../lib/pipelineApi';
 
 const SERVICES = ['Web Design', 'SEO', 'Performance Optimization', 'Full Redesign', 'Other'];
