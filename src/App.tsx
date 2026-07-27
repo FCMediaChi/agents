@@ -14,7 +14,7 @@ import PipelineRegister from './pages/pipeline/PipelineRegister'
 import PipelineOnboarding from './pages/pipeline/PipelineOnboarding'
 import PipelineDashboard from './pages/pipeline/PipelineDashboard'
 import PipelineCaseStudy from './pages/pipeline/PipelineCaseStudy'
-import PipelineColdPitch from './pages/pipeline/PipelineColdPitch'
+import ColdPitchBuilder from './pages/pipeline/ColdPitchBuilder'
 import { 
   Compass, 
   Layers, 
@@ -1059,7 +1059,7 @@ export default function App() {
       <Route path="/pipeline/onboarding" element={<PipelineProtectedRoute><PipelineOnboarding /></PipelineProtectedRoute>} />
       <Route path="/pipeline/dashboard" element={<PipelineProtectedRoute><PipelineDashboard /></PipelineProtectedRoute>} />
       <Route path="/pipeline/case-study" element={<PipelineProtectedRoute><PipelineCaseStudy /></PipelineProtectedRoute>} />
-      <Route path="/pipeline/cold-pitch" element={<PipelineProtectedRoute><PipelineColdPitch /></PipelineProtectedRoute>} />
+      <Route path="/pipeline/cold-pitch" element={<PipelineProtectedRoute><ColdPitchBuilder /></PipelineProtectedRoute>} />
 
       <Route path="*" element={<LandingPage />} />
     </Routes>

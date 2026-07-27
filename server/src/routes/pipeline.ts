@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js';
 import { requirePipelineAccess } from '../middleware/trial.js';
 import { AuthenticatedRequest } from '../types.js';
 import { generateCaseStudy, auditSite, type CaseStudyInput } from '../caseStudyEngine.js';
+import { analyzePitch } from '../pitchAnalyzer.js';
 
 const router = Router();
 
@@ -198,11 +199,93 @@ router.post('/case-studies/:id/generate', authenticate, requirePipelineAccess, a
   res.json({ case_study: { ...existing, generated_content: generated, status: 'generated' } });
 });
 
-// --- Pitches stub ---
+// --- Pitches CRUD ---
+
+// GET /api/pipeline/pitches
 router.get('/pitches', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
   const db = getDb();
   const pitches = db.prepare('SELECT * FROM pipeline_pitches WHERE user_id = ? ORDER BY created_at DESC').all(req.user!.userId);
-  res.json({ pitches });
+  const parsed = pitches.map((p: any) => ({
+    ...p,
+    audit_results: p.audit_results ? JSON.parse(p.audit_results) : null,
+    cold_email: p.cold_email ? JSON.parse(p.cold_email) : null,
+  }));
+  res.json({ pitches: parsed });
+});
+
+// GET /api/pipeline/pitches/:id
+router.get('/pitches/:id', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
+  const db = getDb();
+  const pitch = db.prepare('SELECT * FROM pipeline_pitches WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.userId) as any;
+  if (!pitch) { res.status(404).json({ error: 'Pitch not found' }); return; }
+  if (pitch.audit_results) pitch.audit_results = JSON.parse(pitch.audit_results);
+  if (pitch.cold_email) pitch.cold_email = JSON.parse(pitch.cold_email);
+  res.json({ pitch });
+});
+
+// POST /api/pipeline/pitches
+router.post('/pitches', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
+  const { prospect_name, prospect_url, service } = req.body;
+  if (!prospect_name || !prospect_name.trim()) {
+    res.status(400).json({ error: 'Prospect name is required' }); return;
+  }
+  const db = getDb();
+  const id = uuidv4();
+  db.prepare(
+    'INSERT INTO pipeline_pitches (id, user_id, prospect_name, prospect_url) VALUES (?, ?, ?, ?)'
+  ).run(id, req.user!.userId, prospect_name.trim(), prospect_url || null);
+  // Store service as part of audit_results JSON
+  if (service) {
+    const meta = JSON.stringify({ service });
+    db.prepare('UPDATE pipeline_pitches SET audit_results = ? WHERE id = ?').run(meta, id);
+  }
+  const pitch = db.prepare('SELECT * FROM pipeline_pitches WHERE id = ?').get(id) as any;
+  res.status(201).json({ pitch });
+});
+
+// POST /api/pipeline/pitches/:id/analyze
+router.post('/pitches/:id/analyze', authenticate, requirePipelineAccess, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const db = getDb();
+  const pitch = db.prepare('SELECT * FROM pipeline_pitches WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.userId) as any;
+  if (!pitch) { res.status(404).json({ error: 'Pitch not found' }); return; }
+  if (!pitch.prospect_url) { res.status(400).json({ error: 'Prospect URL is required for analysis' }); return; }
+
+  // Get agency info for email signature
+  let agency;
+  const agencyRow = db.prepare('SELECT * FROM pipeline_agencies WHERE user_id = ?').get(req.user!.userId) as any;
+  if (agencyRow) {
+    agency = {
+      agency_name: agencyRow.agency_name,
+      services: agencyRow.services ? JSON.parse(agencyRow.services) : [],
+      industries: agencyRow.industries ? JSON.parse(agencyRow.industries) : [],
+    };
+  }
+
+  // Extract service from stored audit_results
+  let service = 'Web Design';
+  if (pitch.audit_results) {
+    try { const ar = JSON.parse(pitch.audit_results); if (ar.service) service = ar.service; } catch {}
+  }
+
+  // Run analysis
+  const analysis = await analyzePitch(pitch.prospect_name, pitch.prospect_url, service, agency);
+
+  // Store
+  const ar = JSON.stringify({ service, findings: analysis.findings });
+  const ce = JSON.stringify(analysis.email);
+  db.prepare('UPDATE pipeline_pitches SET audit_results = ?, cold_email = ?, status = ? WHERE id = ?')
+    .run(ar, ce, 'analyzed', req.params.id);
+
+  res.json({ pitch: { ...pitch, audit_results: { service, findings: analysis.findings }, cold_email: analysis.email, status: 'analyzed' } });
+});
+
+// DELETE /api/pipeline/pitches/:id
+router.delete('/pitches/:id', authenticate, requirePipelineAccess, (req: AuthenticatedRequest, res: Response): void => {
+  const db = getDb();
+  const existing = db.prepare('SELECT * FROM pipeline_pitches WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.userId);
+  if (!existing) { res.status(404).json({ error: 'Pitch not found' }); return; }
+  db.prepare('DELETE FROM pipeline_pitches WHERE id = ? AND user_id = ?').run(req.params.id, req.user!.userId);
+  res.json({ success: true });
 });
 
 export default router;
