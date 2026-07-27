@@ -36,19 +36,9 @@ export function requirePipelineAccess(req: AuthenticatedRequest, res: Response, 
     return next();
   }
 
-  // No active trial — check if trial was ever started
-  if (!user.trial_started_at) {
-    // Start a new trial for this user
-    const trialEnds = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    db.prepare(
-      'UPDATE users SET trial_started_at = ?, trial_ends_at = ? WHERE id = ?'
-    ).run(now.toISOString(), trialEnds, req.user.userId);
-    return next();
-  }
-
-  // Trial expired
-  res.status(403).json({
-    error: 'Trial expired',
+  // Trial expired or never started
+  res.status(402).json({
+    error: 'Trial expired. Please choose a plan.',
     message: 'Your 7-day free trial has ended. Please upgrade to continue using Nuria Client Pipeline.',
     code: 'TRIAL_EXPIRED',
   });

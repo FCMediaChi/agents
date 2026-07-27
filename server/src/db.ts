@@ -361,11 +361,10 @@ function initializeSchema(): void {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL UNIQUE,
       agency_name TEXT NOT NULL,
-      website TEXT,
-      niche TEXT,
-      team_size TEXT,
+      website_url TEXT,
+      services TEXT,
+      industries TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
@@ -374,17 +373,16 @@ function initializeSchema(): void {
     CREATE TABLE IF NOT EXISTS pipeline_case_studies (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
-      agency_id TEXT,
       client_name TEXT NOT NULL,
-      industry TEXT,
-      challenge TEXT,
-      solution TEXT,
-      results TEXT,
+      client_url TEXT,
+      old_site_url TEXT,
+      screenshots TEXT,
+      traffic_data TEXT,
+      revenue_data TEXT,
+      generated_content TEXT,
       status TEXT NOT NULL DEFAULT 'draft',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (agency_id) REFERENCES pipeline_agencies(id) ON DELETE SET NULL
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
@@ -392,19 +390,29 @@ function initializeSchema(): void {
     CREATE TABLE IF NOT EXISTS pipeline_pitches (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
-      agency_id TEXT,
       prospect_name TEXT NOT NULL,
-      company_name TEXT,
-      industry TEXT,
-      pain_points TEXT,
-      proposed_solution TEXT,
+      prospect_url TEXT,
+      audit_results TEXT,
+      cold_email TEXT,
       status TEXT NOT NULL DEFAULT 'draft',
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-      FOREIGN KEY (agency_id) REFERENCES pipeline_agencies(id) ON DELETE SET NULL
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+
+  // Migration: add columns if tables already existed
+  try { db.run('ALTER TABLE pipeline_agencies ADD COLUMN services TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_agencies ADD COLUMN industries TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_agencies RENAME COLUMN website TO website_url'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN client_url TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN old_site_url TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN screenshots TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN traffic_data TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN revenue_data TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN generated_content TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN prospect_url TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN audit_results TEXT'); } catch { /* ok */ }
+  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN cold_email TEXT'); } catch { /* ok */ }
 
   // Create indexes
   const indexes = [
