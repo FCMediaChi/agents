@@ -961,8 +961,7 @@ function LandingPage() {
                 <h3 className="text-lg font-extrabold text-slate-900">Agency</h3>
                 <p className="text-slate-500 text-xs mt-1">For growing agencies</p>
                 <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$297</span>
-                  <span className="text-xs text-slate-400 ml-1">/ month</span>
+                  <span className="text-2xl font-extrabold">Call for Pricing</span>
                 </div>
               </div>
               <ul className="space-y-2 mb-6 flex-1 text-xs">
@@ -970,11 +969,8 @@ function LandingPage() {
                   <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Team, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/8x2cN55Eo6Veej20nkfAc0b" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/cNicN50k46Ve8YI2vsfAc0c" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($2,580)
+              <a href="#" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
+                Contact Us
               </a>
             </div>
 
