@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
+import { useTitle } from '../../hooks/useTitle';
 
 const STRIPE_SINGLE = 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02';
 const STRIPE_TEAM_MONTHLY = 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03';
@@ -155,6 +156,7 @@ const PLANS = [
 export default function AuditPage() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  useTitle('Nuria Website Audit | Nuria AI');
   const [error, setError] = useState('');
   const [report, setReport] = useState<AuditReport | null>(null);
   const [polling, setPolling] = useState(false);

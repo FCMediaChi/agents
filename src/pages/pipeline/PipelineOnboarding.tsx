@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTitle } from '../../hooks/useTitle';
 import { Loader2, Building2, Globe, ArrowRight } from 'lucide-react';
 import { pipelineApi } from '../../lib/pipelineApi';
 
@@ -8,6 +9,7 @@ const INDUSTRIES = ['E-commerce', 'SaaS', 'Local Business', 'Real Estate', 'Rest
 
 export default function PipelineOnboarding() {
   const navigate = useNavigate();
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');

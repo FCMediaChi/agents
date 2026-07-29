@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTitle } from '../../hooks/useTitle';
 import { Loader2, Sparkles } from 'lucide-react';
 import { pipelineApi } from '../../lib/pipelineApi';
 
 export default function PipelineLogin() {
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

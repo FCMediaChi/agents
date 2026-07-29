@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTitle } from '../../hooks/useTitle';
 import { ArrowLeft, Loader2, Search, Mail, Copy, RefreshCw, Plus, AlertTriangle, ChevronDown, Check } from 'lucide-react';
 import { pipelineApi, type PipelinePitch, type PitchFinding, type ColdEmailScript } from '../../lib/pipelineApi';
 
@@ -15,6 +16,7 @@ type Tab = 'teardown' | 'email';
 
 export default function ColdPitchBuilder() {
   const [step, setStep] = useState<'create' | 'analyzing' | 'result'>('create');
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [pitch, setPitch] = useState<PipelinePitch | null>(null);

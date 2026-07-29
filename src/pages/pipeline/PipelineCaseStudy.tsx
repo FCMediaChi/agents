@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTitle } from '../../hooks/useTitle';
 import { FileText, Loader2, Check, ArrowLeft, Plus, Trash2, Edit3, Save, Sparkles, TrendingUp } from 'lucide-react';
 import { pipelineApi, type PipelineCaseStudy } from '../../lib/pipelineApi';
 
@@ -7,6 +8,7 @@ type Step = 'create' | 'generating' | 'result';
 
 export default function PipelineCaseStudyPage() {
   const [step, setStep] = useState<Step>('create');
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [caseStudy, setCaseStudy] = useState<PipelineCaseStudy | null>(null);

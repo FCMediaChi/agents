@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTitle } from '../../hooks/useTitle';
 import { Loader2, FileText, Send, LayoutDashboard, LogOut, Plus, Clock, AlertTriangle, CalendarCheck } from 'lucide-react';
 import { pipelineApi, type DashboardData } from '../../lib/pipelineApi';
 
@@ -7,6 +8,7 @@ type Tab = 'dashboard' | 'case-studies' | 'pitches';
 
 export default function PipelineDashboard() {
   const navigate = useNavigate();
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [error, setError] = useState('');

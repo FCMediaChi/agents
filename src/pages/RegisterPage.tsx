@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTitle } from '../hooks/useTitle';
 import { useAuth } from '../lib/auth';
 import { Compass, Loader2 } from 'lucide-react';
 
 export default function RegisterPage() {
+  useTitle('Nuria Website Blueprint | Nuria AI');
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

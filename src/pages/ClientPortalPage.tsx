@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTitle } from '../hooks/useTitle';
 import { Compass, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface ProjectData {
@@ -11,6 +12,7 @@ interface ProjectData {
 
 export default function ClientPortalPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  useTitle('Nuria Website Blueprint | Nuria AI');
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token') || '';
 

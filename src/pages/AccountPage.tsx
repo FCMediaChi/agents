@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Palette, Plus, Trash2, Save, Loader2, Check, Key, Copy, Globe, Shield } from 'lucide-react';
+import { useTitle } from '../hooks/useTitle';
 
 interface TeamMember {
   id: string;
@@ -20,6 +21,7 @@ interface WhitelabelSettings {
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<'team' | 'whitelabel' | 'blueprintwl' | 'apikeys' | 'domains'>('team');
+  useTitle('Nuria Website Blueprint | Nuria AI');
 
   // Team state
   const [members, setMembers] = useState<TeamMember[]>([]);

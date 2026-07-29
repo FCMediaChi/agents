@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTitle } from '../hooks/useTitle';
 import { useParams, Link } from 'react-router-dom';
 import { api, type Page, type Project } from '../lib/api';
 import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronRight, Save, Loader2, FileText, HelpCircle, ClipboardList, Layout, ScrollText } from 'lucide-react';
@@ -75,6 +76,7 @@ const TABS: { key: PageTab; label: string; icon: any }[] = [
 
 export default function SitemapBuilderPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  useTitle('Nuria Website Blueprint | Nuria AI');
   const [project, setProject] = useState<Project | null>(null);
   const [pages, setPages] = useState<Page[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);

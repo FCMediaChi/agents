@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTitle } from '../../hooks/useTitle';
 import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
 
 const FAQ_ITEMS = [
@@ -18,6 +19,7 @@ const HOW_IT_WORKS = [
 export default function PipelineLanding() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  useTitle('Nuria Client Pipeline | Nuria AI');
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans">
       {/* Header */}

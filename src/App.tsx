@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTitle } from './hooks/useTitle'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
@@ -99,6 +100,7 @@ function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function LandingPage() {
+  useTitle('Nuria Website Blueprint | Nuria AI');
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")

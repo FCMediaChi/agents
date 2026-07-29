@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useTitle } from '../hooks/useTitle';
 import { api, type Project } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Compass, Plus, LogOut, Loader2, FileText, ExternalLink, Trash2, Users, X, Check } from 'lucide-react';
@@ -9,6 +10,7 @@ interface Member {
 
 export default function DashboardPage() {
   const { user, logout } = useAuth();
+  useTitle('Nuria Website Blueprint | Nuria AI');
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
