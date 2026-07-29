@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Users, Palette, Plus, Trash2, Save, Loader2, Check, Key, Copy, Globe, Shield } from 'lucide-react';
-import { useTitle } from '../hooks/useTitle';
+import { useTitle } from '../lib/useTitle';
 
 interface TeamMember {
   id: string;

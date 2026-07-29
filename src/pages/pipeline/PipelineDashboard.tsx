@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useTitle } from '../../hooks/useTitle';
+import { useTitle } from '../../lib/useTitle';
 import { Loader2, FileText, Send, LayoutDashboard, LogOut, Plus, Clock, AlertTriangle, CalendarCheck } from 'lucide-react';
 import { pipelineApi, type DashboardData } from '../../lib/pipelineApi';
 

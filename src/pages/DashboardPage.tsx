@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTitle } from '../hooks/useTitle';
+import { useTitle } from '../lib/useTitle';
 import { api, type Project } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { Compass, Plus, LogOut, Loader2, FileText, ExternalLink, Trash2, Users, X, Check } from 'lucide-react';

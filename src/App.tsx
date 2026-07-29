@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTitle } from './hooks/useTitle'
+import { useTitle } from './lib/useTitle'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'

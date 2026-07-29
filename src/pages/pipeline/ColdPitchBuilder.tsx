@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTitle } from '../../hooks/useTitle';
+import { useTitle } from '../../lib/useTitle';
 import { ArrowLeft, Loader2, Search, Mail, Copy, RefreshCw, Plus, AlertTriangle, ChevronDown, Check } from 'lucide-react';
 import { pipelineApi, type PipelinePitch, type PitchFinding, type ColdEmailScript } from '../../lib/pipelineApi';
 

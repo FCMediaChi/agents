@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { useTitle } from '../hooks/useTitle';
+import { useTitle } from '../lib/useTitle';
 import { Compass, ChevronDown, ChevronRight } from 'lucide-react';
 
 interface ProjectData {

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTitle } from '../../hooks/useTitle';
+import { useTitle } from '../../lib/useTitle';
 import { Loader2, Building2, Globe, ArrowRight } from 'lucide-react';
 import { pipelineApi } from '../../lib/pipelineApi';
 

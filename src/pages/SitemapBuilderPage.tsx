@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useTitle } from '../hooks/useTitle';
+import { useTitle } from '../lib/useTitle';
 import { useParams, Link } from 'react-router-dom';
 import { api, type Page, type Project } from '../lib/api';
 import { ArrowLeft, Plus, Trash2, ChevronDown, ChevronRight, Save, Loader2, FileText, HelpCircle, ClipboardList, Layout, ScrollText } from 'lucide-react';

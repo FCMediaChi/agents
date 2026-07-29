@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
-import { useTitle } from '../hooks/useTitle';
+import { useTitle } from '../lib/useTitle';
 import { Compass, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {

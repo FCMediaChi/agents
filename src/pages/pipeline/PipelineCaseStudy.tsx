@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useTitle } from '../../hooks/useTitle';
+import { useTitle } from '../../lib/useTitle';
 import { FileText, Loader2, Check, ArrowLeft, Plus, Trash2, Edit3, Save, Sparkles, TrendingUp } from 'lucide-react';
 import { pipelineApi, type PipelineCaseStudy } from '../../lib/pipelineApi';
 

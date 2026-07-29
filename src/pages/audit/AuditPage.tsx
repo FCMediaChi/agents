@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
-import { useTitle } from '../../hooks/useTitle';
+import { useTitle } from '../../lib/useTitle';
 
 const STRIPE_SINGLE = 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02';
 const STRIPE_TEAM_MONTHLY = 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03';
