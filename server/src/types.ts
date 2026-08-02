@@ -7,6 +7,12 @@ export interface User {
   email: string;
   password_hash: string;
   subscription_tier: SubscriptionTier;
+  verified: number;
+  verification_token: string | null;
+  reset_token: string | null;
+  reset_token_expiry: string | null;
+  trial_started_at: string | null;
+  trial_ends_at: string | null;
   created_at: string;
   updated_at: string;
 }

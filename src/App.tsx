@@ -3,6 +3,9 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import VerifyPage from './pages/VerifyPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 import DashboardPage from './pages/DashboardPage'
 import SitemapBuilderPage from './pages/SitemapBuilderPage'
 import AuditPage from './pages/audit/AuditPage'
@@ -1047,6 +1050,9 @@ export default function App() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />
+      <Route path="/verify" element={<VerifyPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/app" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
       <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
       <Route path="/app/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
