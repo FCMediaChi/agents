@@ -17,6 +17,7 @@ import accountRoutes from './routes/account.js';
 import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
 import pipelineRoutes from './routes/pipeline.js';
+import checkoutRoutes from './routes/checkout.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
 import { startRateLimitCleanup, stopRateLimitCleanup } from './rateLimit.js';
 
@@ -53,6 +54,7 @@ async function main() {
   app.use('/api/account', apiKeyRoutes);
   app.use('/api/account', domainRoutes);
   app.use('/api/pipeline', pipelineRoutes);
+  app.use('/api', checkoutRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import LoginPage from './pages/LoginPage'
@@ -33,6 +34,7 @@ import {
   TrendingUp,
   Lock
 } from 'lucide-react'
+import { useTitle } from './lib/useTitle';
 
 // Define the content questionnaires per page type
 const QUESTIONNAIRE_TEMPLATES: Record<string, string[]> = {
@@ -102,6 +104,7 @@ function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function LandingPage() {
+  useTitle('Nuria Website Blueprint | Nuria AI');
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")
@@ -110,6 +113,26 @@ function LandingPage() {
   // Custom branding colors state for proposal simulator
   const [brandPrimary, setBrandPrimary] = useState<string>("#1A9EF2")
   const [brandSecondary, setBrandSecondary] = useState<string>("#4551D3")
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const handleCheckout = async (tier: 'solo' | 'team', interval: 'monthly' | 'yearly') => {
+    setCheckoutLoading(`${tier}-${interval}`);
+    setCheckoutError(null);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier, interval }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCheckoutError(data.error || 'Failed to start checkout'); setCheckoutLoading(null); return; }
+      window.location.href = data.url;
+    } catch {
+      setCheckoutError('Network error. Please try again.');
+      setCheckoutLoading(null);
+    }
+  };
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
   const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
 
@@ -891,6 +914,14 @@ function LandingPage() {
 
           <div className="grid lg:grid-cols-4 gap-6 items-stretch max-w-6xl mx-auto">
             
+            {checkoutError && (
+              <div className="lg:col-span-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {checkoutError}
+                <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">&times;</button>
+              </div>
+            )}
+
             {/* Free Tier */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
               <div className="mb-5">
@@ -926,12 +957,14 @@ function LandingPage() {
                   <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($566)
-              </a>
+              <button onClick={() => handleCheckout('solo', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] disabled:bg-slate-300 text-white text-center transition-all mb-1.5 flex items-center justify-center gap-2">
+                {checkoutLoading === 'solo-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Start Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('solo', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] disabled:text-slate-400 text-center border border-[#C3E8FF] hover:border-[#1A9EF2] disabled:border-slate-200 transition-all flex items-center justify-center gap-1">
+                {checkoutLoading === 'solo-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Pay Yearly ($566)'}
+              </button>
             </div>
 
             {/* Team Tier */}
@@ -950,12 +983,14 @@ function LandingPage() {
                   <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Solo, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/fZu7sLaYIa7q3EofiefAc09" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/28EdR99UE0wQdeY0nkfAc0a" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($1,430)
-              </a>
+              <button onClick={() => handleCheckout('team', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] disabled:bg-slate-300 text-white text-center transition-all mb-1.5 flex items-center justify-center gap-2">
+                {checkoutLoading === 'team-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Start Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('team', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] disabled:text-slate-400 text-center border border-[#C3E8FF] hover:border-[#1A9EF2] disabled:border-slate-200 transition-all flex items-center justify-center gap-1">
+                {checkoutLoading === 'team-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Pay Yearly ($1,430)'}
+              </button>
             </div>
 
             {/* Agency Tier */}
@@ -964,8 +999,8 @@ function LandingPage() {
                 <h3 className="text-lg font-extrabold text-slate-900">Agency</h3>
                 <p className="text-slate-500 text-xs mt-1">For growing agencies</p>
                 <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$297</span>
-                  <span className="text-xs text-slate-400 ml-1">/ month</span>
+                  <span className="text-2xl font-extrabold text-slate-400">Contact Us</span>
+                  <span className="text-xs text-slate-400 ml-1">for pricing</span>
                 </div>
               </div>
               <ul className="space-y-2 mb-6 flex-1 text-xs">
@@ -973,12 +1008,10 @@ function LandingPage() {
                   <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Team, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/8x2cN55Eo6Veej20nkfAc0b" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all mb-1.5">
-                Start Monthly
+              <a href="mailto:sales@nuria.firstcreationmedia.com" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all">
+                Contact Us
               </a>
-              <a href="https://buy.stripe.com/cNicN50k46Ve8YI2vsfAc0c" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($2,580)
-              </a>
+              <p className="text-xs text-slate-400 text-center mt-3">sales@nuria.firstcreationmedia.com</p>
             </div>
 
           </div>
