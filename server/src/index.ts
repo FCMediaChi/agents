@@ -18,6 +18,7 @@ import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
 import pipelineRoutes from './routes/pipeline.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
+import { startRateLimitCleanup, stopRateLimitCleanup } from './rateLimit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,6 +131,9 @@ async function main() {
   // Initialize database
   await initDb();
 
+  // Start periodic rate-limit cleanup (sweeps expired entries every 15 min)
+  startRateLimitCleanup();
+
   // Start server
   const server = app.listen(config.port, '0.0.0.0', () => {
     console.log(`[Nuria Website Blueprint] Server running on http://0.0.0.0:${config.port}`);
@@ -143,6 +147,7 @@ async function main() {
   const shutdown = () => {
     console.log('[Nuria Website Blueprint] Shutting down...');
     clearInterval(persistInterval);
+    stopRateLimitCleanup();
     persistDb();
     closeDb();
     server.close(() => process.exit(0));
