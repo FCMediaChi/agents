@@ -177,6 +177,7 @@ router.post('/login', (req: AuthenticatedRequest, res: Response): void => {
   const { email, password } = parsed.data;
   const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
 
+  // Rate limit check
   const blocked = checkRateLimit(ip, email);
   if (blocked) {
     res.status(429).json({
@@ -213,6 +214,7 @@ router.post('/login', (req: AuthenticatedRequest, res: Response): void => {
     return;
   }
 
+  // Successful login — clear rate limit counters
   clearRateLimit(ip, email);
 
   const token = jwt.sign(
