@@ -7,6 +7,7 @@ import { config } from '../config.js';
 import { RegisterSchema, LoginSchema } from '../schemas/auth.js';
 import { AuthenticatedRequest, User } from '../types.js';
 import { authenticate } from '../middleware/auth.js';
+import { checkRateLimit, recordFailedAttempt, clearRateLimit } from '../rateLimit.js';
 
 const router = Router();
 
@@ -68,19 +69,36 @@ router.post('/login', (req: AuthenticatedRequest, res: Response): void => {
   }
 
   const { email, password } = parsed.data;
+  const ip = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || 'unknown';
+
+  // Rate limit check
+  const blocked = checkRateLimit(ip, email);
+  if (blocked) {
+    res.status(429).json({
+      error: 'Too many login attempts',
+      message: `Too many login attempts. Try again in ${blocked}.`,
+    });
+    return;
+  }
+
   const db = getDb();
 
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email) as User | undefined;
   if (!user) {
+    recordFailedAttempt(ip, email);
     res.status(401).json({ error: 'Invalid credentials', message: 'Email or password is incorrect.' });
     return;
   }
 
   const validPassword = bcrypt.compareSync(password, user.password_hash);
   if (!validPassword) {
+    recordFailedAttempt(ip, email);
     res.status(401).json({ error: 'Invalid credentials', message: 'Email or password is incorrect.' });
     return;
   }
+
+  // Successful login — clear rate limit counters
+  clearRateLimit(ip, email);
 
   const token = jwt.sign(
     { userId: user.id, email: user.email, subscriptionTier: user.subscription_tier },
