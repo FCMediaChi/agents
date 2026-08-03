@@ -10,6 +10,7 @@ export interface Project {
   id: string;
   title: string;
   description: string | null;
+  website_type: string | null;
   user_id: string;
   branding_logo_url: string | null;
   branding_primary_color: string;
@@ -94,8 +95,8 @@ export const api = {
       request<Project[]>('/projects'),
     get: (id: string) =>
       request<Project>(`/projects/${id}`),
-    create: (title: string, description?: string) =>
-      request<Project>('/projects', { method: 'POST', body: JSON.stringify({ title, description }) }),
+    create: (title: string, description?: string, website_type?: string | null) =>
+      request<Project>('/projects', { method: 'POST', body: JSON.stringify({ title, description, website_type }) }),
     update: (id: string, data: Partial<Project>) =>
       request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) =>

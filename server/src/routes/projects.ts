@@ -23,6 +23,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response): void => {
     id: p.id,
     title: p.title,
     description: p.description,
+    website_type: p.website_type,
     branding_logo_url: p.branding_logo_url,
     branding_primary_color: p.branding_primary_color,
     branding_secondary_color: p.branding_secondary_color,
@@ -39,13 +40,13 @@ router.post('/', projectCreateCooldown, checkProjectLimit, (req: AuthenticatedRe
     return;
   }
 
-  const { title, description } = parsed.data;
+  const { title, description, website_type } = parsed.data;
   const db = getDb();
   const id = uuidv4();
 
   db.prepare(
-    'INSERT INTO projects (id, user_id, title, description) VALUES (?, ?, ?, ?)'
-  ).run(id, req.user!.userId, title, description ?? null);
+    'INSERT INTO projects (id, user_id, title, description, website_type) VALUES (?, ?, ?, ?, ?)'
+  ).run(id, req.user!.userId, title, description ?? null, website_type ?? null);
 
   // Increment monthly project counter for paid tiers
   incrementProjectCount(req.user!.userId, req.user!.subscriptionTier || 'FREE');
@@ -56,6 +57,7 @@ router.post('/', projectCreateCooldown, checkProjectLimit, (req: AuthenticatedRe
     id: project.id,
     title: project.title,
     description: project.description,
+    website_type: project.website_type,
     user_id: project.user_id,
     branding_logo_url: project.branding_logo_url,
     branding_primary_color: project.branding_primary_color,
@@ -79,6 +81,7 @@ router.get('/:id', (req: AuthenticatedRequest, res: Response): void => {
     id: project.id,
     title: project.title,
     description: project.description,
+    website_type: project.website_type,
     user_id: project.user_id,
     branding_logo_url: project.branding_logo_url,
     branding_primary_color: project.branding_primary_color,

@@ -420,6 +420,9 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN audit_results TEXT'); } catch { /* ok */ }
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN cold_email TEXT'); } catch { /* ok */ }
 
+  // Add website_type to projects (migration)
+  try { db.run('ALTER TABLE projects ADD COLUMN website_type TEXT'); } catch { /* ok */ }
+
   // Create indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',

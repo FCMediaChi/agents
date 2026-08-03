@@ -29,6 +29,7 @@ export interface Project {
   user_id: string;
   title: string;
   description: string | null;
+  website_type: string | null;
   branding_logo_url: string | null;
   branding_primary_color: string;
   branding_secondary_color: string;

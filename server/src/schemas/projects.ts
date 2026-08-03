@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const CreateProjectSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200, 'Title must be under 200 characters'),
   description: z.string().max(2000, 'Description too long').optional().nullable(),
+  website_type: z.enum(['ecommerce', 'business', 'saas']).optional().nullable(),
 });
 
 export const UpdateProjectSchema = z.object({
