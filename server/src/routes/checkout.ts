@@ -1,7 +1,16 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '');
+// Stripe client — initialized lazily so the server can start without STRIPE_SECRET_KEY
+let _stripe: Stripe | null = null;
+function getStripe(): Stripe {
+  if (!_stripe) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key) throw new Error('STRIPE_SECRET_KEY is not configured');
+    _stripe = new Stripe(key);
+  }
+  return _stripe;
+}
 
 // Cache: map "product:tier:interval" → price_id, refreshed lazily
 let priceCache: Record<string, string> | null = null;
@@ -21,6 +30,8 @@ async function discoverPrices(): Promise<Record<string, string>> {
   if (priceCache && now < priceCacheExpiresAt) {
     return priceCache;
   }
+
+  const stripe = getStripe();
 
   // Pull all active recurring prices and expand product data
   const prices = await stripe.prices.list({
@@ -108,7 +119,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'subscription',
       line_items: [
         {
