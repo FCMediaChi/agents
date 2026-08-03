@@ -414,6 +414,19 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN audit_results TEXT'); } catch { /* ok */ }
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN cold_email TEXT'); } catch { /* ok */ }
 
+  // Invite codes — for manual tier onboarding without Stripe
+  db.run(`
+    CREATE TABLE IF NOT EXISTS invite_codes (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      tier TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      max_uses INTEGER DEFAULT 1,
+      uses INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1
+    )
+  `);
+
   // Create indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
@@ -429,6 +442,7 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_pipeline_agencies_user_id ON pipeline_agencies(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_case_studies_user_id ON pipeline_case_studies(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',
+    'CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code)',
     ];
   for (const idx of indexes) {
     try { db.run(idx); } catch { /* may already exist */ }

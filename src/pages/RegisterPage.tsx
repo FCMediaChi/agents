@@ -6,6 +6,7 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -14,8 +15,12 @@ export default function RegisterPage() {
     setError('');
     setLoading(true);
     try {
-      await register(email, password);
-      window.location.href = '/app';
+      const user = await register(email, password, inviteCode.trim() || undefined);
+      if (user.subscription_tier === 'AGENCY') {
+        window.location.href = '/app?welcome=agency';
+      } else {
+        window.location.href = '/app';
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed');
     } finally {
@@ -65,6 +70,17 @@ export default function RegisterPage() {
               placeholder="At least 6 characters"
               minLength={6}
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">Have an invite code? <span className="text-slate-400 font-normal">(optional)</span></label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={e => setInviteCode(e.target.value)}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-[#1A9EF2] focus:ring-2 focus:ring-[#C3E8FF] outline-none transition-all text-sm font-mono tracking-wide"
+              placeholder="NURIA-XXXX-XXXX-XXXX"
             />
           </div>
 
