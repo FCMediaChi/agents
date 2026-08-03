@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
+import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool, Loader2, AlertCircle } from 'lucide-react';
+import { useTitle } from '../../lib/useTitle';
 
 const FAQ_ITEMS = [
   { q: "What is Nuria Client Pipeline?", a: "Nuria Client Pipeline helps agencies scale outbound sales by automatically identifying website flaws on target leads and matching them with data-backed proof — so you can book more high-ticket meetings without manual prospecting." },
@@ -16,7 +17,28 @@ const HOW_IT_WORKS = [
 ];
 
 export default function PipelineLanding() {
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const handleCheckout = async (tier: 'solo' | 'team', interval: 'monthly' | 'yearly') => {
+    setCheckoutLoading(`${tier}-${interval}`);
+    setCheckoutError(null);
+    try {
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: 'pipeline', tier, interval }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCheckoutError(data.error || 'Failed to start checkout'); setCheckoutLoading(null); return; }
+      window.location.href = data.url;
+    } catch {
+      setCheckoutError('Network error. Please try again.');
+      setCheckoutLoading(null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans">
@@ -136,23 +158,69 @@ export default function PipelineLanding() {
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Start with a 7-day free trial. Then choose a plan.</h2>
           </div>
+          {checkoutError && (
+            <div className="max-w-5xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              {checkoutError}
+              <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">&times;</button>
+            </div>
+          )}
           <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            {[
-              { name: 'Free Trial', price: '$0', period: '7 days', features: ['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'], cta: 'Start Free', href: '/pipeline/register', featured: false },
-              { name: 'Solo', price: 'TBD', period: '/mo', features: ['Everything in Free', 'Unlimited case studies', 'Unlimited cold pitches', 'Custom branding'], cta: 'Coming Soon', href: '#', featured: false },
-              { name: 'Team', price: 'TBD', period: '/mo', features: ['Everything in Solo', 'Up to 5 team members', 'Shared templates', 'Priority support'], cta: 'Coming Soon', href: '#', featured: true },
-              { name: 'Agency', price: 'TBD', period: '/mo', features: ['Everything in Team', 'Unlimited team members', 'White-label exports', 'API access'], cta: 'Coming Soon', href: '#', featured: false },
-            ].map((plan, i) => (
-              <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
-                {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{plan.name}</h3>
-                <div className="mb-4"><span className="text-3xl font-extrabold text-slate-900">{plan.price}</span><span className="text-slate-400 text-sm ml-1">{plan.period}</span></div>
-                <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
-                </ul>
-                <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-slate-100 text-slate-500 cursor-not-allowed'}`}>{plan.cta}</a>
-              </div>
-            ))}
+            {/* Free Trial */}
+            <div className="relative p-6 rounded-2xl border-2 border-slate-200 bg-white flex flex-col">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Free Trial</h3>
+              <div className="mb-4"><span className="text-3xl font-extrabold text-slate-900">$0</span><span className="text-slate-400 text-sm ml-1">7 days</span></div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'].map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+              </ul>
+              <a href="/pipeline/register" className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all">Start Free</a>
+            </div>
+
+            {/* Solo */}
+            <div className="relative p-6 rounded-2xl border-2 border-slate-200 bg-white flex flex-col">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Solo</h3>
+              <div className="mb-4"><span className="text-3xl font-extrabold text-slate-900">$79</span><span className="text-slate-400 text-sm ml-1">/mo</span></div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {['Everything in Free', 'Unlimited case studies', 'Unlimited cold pitches', 'Custom branding', 'PDF & HTML export'].map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+              </ul>
+              <button onClick={() => handleCheckout('solo', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] disabled:bg-slate-300 transition-all mb-1.5 flex items-center justify-center gap-2">
+                {checkoutLoading === 'solo-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('solo', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg text-sm font-medium text-center text-[#1A9EF2] hover:text-[#4551D3] disabled:text-slate-400 border border-[#C3E8FF] hover:border-[#1A9EF2] disabled:border-slate-200 transition-all flex items-center justify-center gap-1">
+                {checkoutLoading === 'solo-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Yearly $758'}
+              </button>
+            </div>
+
+            {/* Team */}
+            <div className="relative p-6 rounded-2xl border-2 border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10 bg-white flex flex-col">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Team</h3>
+              <div className="mb-4"><span className="text-3xl font-extrabold text-slate-900">$199</span><span className="text-slate-400 text-sm ml-1">/mo</span></div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {['Everything in Solo', 'Up to 5 team members', 'Shared templates', 'Team dashboard', 'Priority support'].map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+              </ul>
+              <button onClick={() => handleCheckout('team', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] disabled:bg-slate-300 transition-all mb-1.5 flex items-center justify-center gap-2">
+                {checkoutLoading === 'team-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('team', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg text-sm font-medium text-center text-[#1A9EF2] hover:text-[#4551D3] disabled:text-slate-400 border border-[#C3E8FF] hover:border-[#1A9EF2] disabled:border-slate-200 transition-all flex items-center justify-center gap-1">
+                {checkoutLoading === 'team-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Yearly $1,910'}
+              </button>
+            </div>
+
+            {/* Agency */}
+            <div className="relative p-6 rounded-2xl border-2 border-slate-200 bg-white flex flex-col">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Agency</h3>
+              <div className="mb-4"><span className="text-2xl font-extrabold text-slate-400">Contact Us</span><span className="text-slate-400 text-sm ml-1">for pricing</span></div>
+              <ul className="space-y-2 mb-6 flex-1">
+                {['Everything in Team', 'Unlimited team members', 'White-label exports', 'API access', 'Dedicated support'].map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+              </ul>
+              <a href="mailto:sales@nuria.firstcreationmedia.com" className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all">Contact Us</a>
+              <p className="text-xs text-slate-400 text-center mt-3">sales@nuria.firstcreationmedia.com</p>
+            </div>
           </div>
         </div>
       </section>
