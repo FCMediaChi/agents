@@ -19,7 +19,7 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
     return;
   }
 
-  const { email, password } = parsed.data;
+  const { email, password, invite_code } = parsed.data;
   const db = getDb();
 
   // Check if email already exists
@@ -32,14 +32,36 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
   const id = uuidv4();
   const passwordHash = bcrypt.hashSync(password, 10);
   const now = new Date().toISOString();
-  const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  let subscriptionTier = 'FREE';
+  let trialStartedAt: string | null = now;
+  let trialEndsAt: string | null = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Handle invite code redemption
+  if (invite_code) {
+    const invite = db.prepare(
+      'SELECT * FROM invite_codes WHERE code = ? AND is_active = 1'
+    ).get(invite_code) as any;
+
+    if (!invite || invite.uses >= invite.max_uses) {
+      res.status(400).json({ error: 'Invalid or expired invite code', message: 'The invite code is invalid, expired, or has already been used.' });
+      return;
+    }
+
+    // Valid invite code — apply the tier and mark code as used
+    subscriptionTier = invite.tier;
+    trialStartedAt = null;
+    trialEndsAt = null;
+
+    // Increment usage
+    db.prepare('UPDATE invite_codes SET uses = uses + 1 WHERE id = ?').run(invite.id);
+  }
 
   db.prepare(
     'INSERT INTO users (id, email, password_hash, subscription_tier, trial_started_at, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, email, passwordHash, 'FREE', now, trialEnds);
+  ).run(id, email, passwordHash, subscriptionTier, trialStartedAt, trialEndsAt);
 
   const token = jwt.sign(
-    { userId: id, email, subscriptionTier: 'FREE' },
+    { userId: id, email, subscriptionTier: subscriptionTier },
     config.jwtSecret,
     { expiresIn: config.jwtExpiresIn }
   );
@@ -54,9 +76,9 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
   res.status(201).json({
     id,
     email,
-    subscription_tier: 'FREE',
-    trial_started_at: now,
-    trial_ends_at: trialEnds,
+    subscription_tier: subscriptionTier,
+    trial_started_at: trialStartedAt,
+    trial_ends_at: trialEndsAt,
   });
 });
 

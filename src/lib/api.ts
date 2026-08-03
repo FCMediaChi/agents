@@ -3,7 +3,9 @@ const API_BASE = '/api';
 export interface User {
   id: string;
   email: string;
-  subscription_tier: 'FREE' | 'PAID';
+  subscription_tier: 'FREE' | 'SOLO' | 'TEAM' | 'AGENCY';
+  trial_started_at?: string | null;
+  trial_ends_at?: string | null;
 }
 
 export interface Project {
@@ -60,8 +62,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 // Auth
 export const api = {
   auth: {
-    register: (email: string, password: string) =>
-      request<User>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+    register: (email: string, password: string, invite_code?: string) =>
+      request<User>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password, invite_code }) }),
     login: (email: string, password: string) =>
       request<User>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     logout: () =>

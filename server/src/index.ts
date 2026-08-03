@@ -18,6 +18,7 @@ import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
 import pipelineRoutes from './routes/pipeline.js';
 import checkoutRoutes from './routes/checkout.js';
+import inviteCodeRoutes from './routes/inviteCodes.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -54,6 +55,7 @@ async function main() {
   app.use('/api/account', domainRoutes);
   app.use('/api/pipeline', pipelineRoutes);
   app.use('/api', checkoutRoutes);
+  app.use('/api/invite-codes', inviteCodeRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {
