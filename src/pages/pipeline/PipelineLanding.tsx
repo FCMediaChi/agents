@@ -21,15 +21,19 @@ export default function PipelineLanding() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [showPromoCode, setShowPromoCode] = useState(false);
 
   const handleCheckout = async (tier: 'solo' | 'team', interval: 'monthly' | 'yearly') => {
     setCheckoutLoading(`${tier}-${interval}`);
     setCheckoutError(null);
     try {
+      const body: any = { product: 'pipeline', tier, interval };
+      if (showPromoCode && promoCode.trim()) body.promo_code = promoCode.trim();
       const res = await fetch('/api/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product: 'pipeline', tier, interval }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) { setCheckoutError(data.error || 'Failed to start checkout'); setCheckoutLoading(null); return; }
@@ -221,6 +225,25 @@ export default function PipelineLanding() {
               <a href="mailto:sales@nuria.firstcreationmedia.com" className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all">Contact Us</a>
               <p className="text-xs text-slate-400 text-center mt-3">sales@nuria.firstcreationmedia.com</p>
             </div>
+          </div>
+          {/* Promo code UI */}
+          <div className="max-w-5xl mx-auto mt-4 text-center">
+            {!showPromoCode ? (
+              <button onClick={() => setShowPromoCode(true)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                Got a promo code?
+              </button>
+            ) : (
+              <div className="inline-flex items-center gap-2">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Enter code"
+                  className="w-[160px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono uppercase tracking-wide focus:border-[#1A9EF2] focus:ring-1 focus:ring-[#C3E8FF] outline-none transition-all"
+                />
+                <button onClick={() => { setShowPromoCode(false); setPromoCode(''); }} className="text-xs text-slate-400 hover:text-slate-600">&times;</button>
+              </div>
+            )}
           </div>
         </div>
       </section>

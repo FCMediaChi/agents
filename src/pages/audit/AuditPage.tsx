@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
 
-const STRIPE_SINGLE = 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02';
-const STRIPE_TEAM_MONTHLY = 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03';
-const STRIPE_TEAM_YEARLY = 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05';
-const STRIPE_AGENCY_MONTHLY = 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04';
-const STRIPE_AGENCY_YEARLY = 'https://buy.stripe.com/5kQ9AT6Is7Ziej23gmifAc05';
-
 interface AuditCheck {
   check_name: string;
   label: string;
@@ -145,11 +139,11 @@ const FAQ_ITEMS = [
   { q: 'What\'s included in each plan?', a: 'Free: homepage-only audit. Single Use ($29): full 7-dimension audit for 1 website. Team ($49/mo or $470/yr): up to 10 websites, 5 user seats, full audits. Agency ($79/mo or $755/yr): unlimited websites, unlimited users, white-labeling, client management.' },
 ];
 
-const PLANS = [
-  { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', href: '#audit-form', featured: false },
-  { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', href: STRIPE_SINGLE, featured: false },
-  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Up to 5 user seats', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
-  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Reports history', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
+const PLANS: { name: string; price: string; desc: string; features: string[]; cta: string; tier: string; interval: string; featured: boolean; secondaryCta?: string; secondaryInterval?: string }[] = [
+  { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', tier: '', interval: '', featured: false },
+  { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', tier: 'single', interval: 'one-time', featured: false },
+  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Up to 5 user seats', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', tier: 'team', interval: 'monthly', featured: true, secondaryCta: 'Pay Yearly', secondaryInterval: 'yearly' },
+  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Reports history', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', tier: 'agency', interval: 'monthly', featured: false, secondaryCta: 'Pay Yearly', secondaryInterval: 'yearly' },
 ];
 
 export default function AuditPage() {
@@ -160,6 +154,30 @@ export default function AuditPage() {
   const [polling, setPolling] = useState(false);
   const [showTool, setShowTool] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState('');
+  const [showPromoCode, setShowPromoCode] = useState(false);
+
+  const handleCheckout = async (tier: string, interval: string) => {
+    setCheckoutLoading(`${tier}-${interval}`);
+    setCheckoutError(null);
+    try {
+      const body: any = { product: 'audit', tier, interval };
+      if (showPromoCode && promoCode.trim()) body.promo_code = promoCode.trim();
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) { setCheckoutError(data.error || 'Failed to start checkout'); setCheckoutLoading(null); return; }
+      window.location.href = data.url;
+    } catch {
+      setCheckoutError('Network error. Please try again.');
+      setCheckoutLoading(null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -270,6 +288,13 @@ export default function AuditPage() {
           <h2 className="text-3xl font-extrabold text-slate-900">Simple Pricing</h2>
           <p className="text-slate-600 mt-2">Start with a free homepage audit, upgrade when you need more</p>
         </div>
+        {checkoutError && (
+          <div className="max-w-5xl mx-auto mb-6 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            {checkoutError}
+            <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">&times;</button>
+          </div>
+        )}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {PLANS.map((plan) => (
             <div key={plan.name} className={`rounded-2xl border-2 p-6 text-center flex flex-col ${plan.featured ? 'border-[#1A9EF2] bg-white shadow-lg shadow-[#1A9EF2]/10 relative' : 'border-slate-200 bg-white'}`}>
@@ -282,18 +307,49 @@ export default function AuditPage() {
                   <li key={f} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />{f}</li>
                 ))}
               </ul>
-              <a href={plan.href} target={plan.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
-                className={`block w-full py-2.5 rounded-xl font-bold text-sm transition-all ${plan.featured ? 'bg-[#1A9EF2] hover:bg-[#4551D3] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}>
-                {plan.cta}
-              </a>
-              {(plan as any).secondaryCta && (
-                <a href={(plan as any).secondaryHref} target="_blank" rel="noopener noreferrer"
-                  className="block w-full mt-2 py-2 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all">
-                  {(plan as any).secondaryCta}
+              {plan.tier ? (
+                <>
+                  <button
+                    onClick={() => handleCheckout(plan.tier, plan.interval)}
+                    disabled={checkoutLoading !== null}
+                    className={`block w-full py-2.5 rounded-xl font-bold text-sm transition-all ${plan.featured ? 'bg-[#1A9EF2] hover:bg-[#4551D3] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'} disabled:opacity-50 flex items-center justify-center gap-2`}>
+                    {checkoutLoading === `${plan.tier}-${plan.interval}` ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : plan.cta}
+                  </button>
+                  {plan.secondaryCta && (
+                    <button
+                      onClick={() => handleCheckout(plan.tier, plan.secondaryInterval!)}
+                      disabled={checkoutLoading !== null}
+                      className="block w-full mt-2 py-2 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                      {checkoutLoading === `${plan.tier}-${plan.secondaryInterval}` ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : plan.secondaryCta}
+                    </button>
+                  )}
+                </>
+              ) : (
+                <a href="#audit-form" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-800 text-center transition-all">
+                  {plan.cta}
                 </a>
               )}
             </div>
           ))}
+        </div>
+        {/* Promo code UI */}
+        <div className="max-w-5xl mx-auto mt-4 text-center">
+          {!showPromoCode ? (
+            <button onClick={() => setShowPromoCode(true)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+              Got a promo code?
+            </button>
+          ) : (
+            <div className="inline-flex items-center gap-2">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => setPromoCode(e.target.value)}
+                placeholder="Enter code"
+                className="w-[160px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono uppercase tracking-wide focus:border-[#1A9EF2] focus:ring-1 focus:ring-[#C3E8FF] outline-none transition-all"
+              />
+              <button onClick={() => { setShowPromoCode(false); setPromoCode(''); }} className="text-xs text-slate-400 hover:text-slate-600">&times;</button>
+            </div>
+          )}
         </div>
       </section>
 

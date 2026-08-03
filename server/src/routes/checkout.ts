@@ -40,18 +40,17 @@ async function discoverPrices(): Promise<Record<string, string>> {
     expand: ['data.product'],
   });
 
-  const tierKeywords = ['Solo', 'Team'];
-  const intervalKeywords = ['Monthly', 'Yearly'];
+  const tierKeywords = ['Solo', 'Team', 'Single', 'Agency'];
+  const intervalKeywords = ['Monthly', 'Yearly', 'One-Time', 'One-time', 'one-time'];
   const productLineKeywords = [
     { keyword: 'Blueprint', prefix: 'blueprint' },
     { keyword: 'Pipeline', prefix: 'pipeline' },
+    { keyword: 'Audit', prefix: 'audit' },
   ];
 
   const map: Record<string, string> = {};
 
   for (const price of prices.data) {
-    if (!price.recurring) continue; // must be a subscription price
-
     const product = price.product as Stripe.Product;
     const name = product?.name ?? '';
 
@@ -69,8 +68,14 @@ async function discoverPrices(): Promise<Record<string, string>> {
     );
 
     if (tier && interval) {
-      const key = `${productLine.prefix}:${tier.toLowerCase()}:${interval.toLowerCase()}`;
-      // Prefer the first matched price per key (deterministic from API order)
+      const tierKey = tier.toLowerCase() === 'single' ? 'single' : tier.toLowerCase();
+      let intervalKey: string;
+      if (['one-time', 'one_time'].includes(interval.toLowerCase().replace('-', '_'))) {
+        intervalKey = 'one-time';
+      } else {
+        intervalKey = interval.toLowerCase();
+      }
+      const key = `${productLine.prefix}:${tierKey}:${intervalKey}`;
       if (!map[key]) {
         map[key] = price.id;
       }
@@ -87,26 +92,29 @@ const router = Router();
 // POST /api/create-checkout-session
 router.post('/create-checkout-session', async (req: Request, res: Response) => {
   try {
-    const { product = 'blueprint', tier, interval } = req.body as {
+    const { product = 'blueprint', tier, interval, promo_code } = req.body as {
       product?: string;
       tier: string;
       interval: string;
+      promo_code?: string;
     };
 
     if (!tier || !interval) {
       return res.status(400).json({ error: 'tier and interval are required' });
     }
 
-    if (!['blueprint', 'pipeline'].includes(product)) {
-      return res.status(400).json({ error: 'Invalid product. Must be "blueprint" or "pipeline".' });
+    if (!['blueprint', 'pipeline', 'audit'].includes(product)) {
+      return res.status(400).json({ error: 'Invalid product. Must be "blueprint", "pipeline", or "audit".' });
     }
 
-    if (!['solo', 'team'].includes(tier)) {
-      return res.status(400).json({ error: 'Invalid tier. Must be "solo" or "team".' });
+    const validTiers = product === 'audit' ? ['single', 'team', 'agency'] : ['solo', 'team'];
+    if (!validTiers.includes(tier)) {
+      return res.status(400).json({ error: `Invalid tier for ${product}. Must be one of: ${validTiers.join(', ')}.` });
     }
 
-    if (!['monthly', 'yearly'].includes(interval)) {
-      return res.status(400).json({ error: 'Invalid interval. Must be "monthly" or "yearly".' });
+    const validIntervals = product === 'audit' ? ['one-time', 'monthly', 'yearly'] : ['monthly', 'yearly'];
+    if (!validIntervals.includes(interval)) {
+      return res.status(400).json({ error: `Invalid interval for ${product}. Must be one of: ${validIntervals.join(', ')}.` });
     }
 
     const prices = await discoverPrices();
@@ -115,26 +123,49 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     if (!priceId) {
       console.error('[Checkout] No price found for', product, tier, interval, 'available keys:', Object.keys(prices));
       return res.status(400).json({
-        error: `No Stripe price found for ${product} ${tier} ${interval}. Ensure products exist in Stripe with "${product === 'pipeline' ? 'Pipeline' : 'Blueprint'}" in the name and "Solo"/"Team" + "Monthly"/"Yearly" keywords.`,
+        error: `No Stripe price found for ${product} ${tier} ${interval}. Ensure products exist in Stripe with the correct names.`,
       });
     }
 
-    const session = await getStripe().checkout.sessions.create({
-      mode: 'subscription',
+    // Determine mode: one-time payment for Audit single, subscription for everything else
+    const mode: 'payment' | 'subscription' =
+      (product === 'audit' && interval === 'one-time') ? 'payment' : 'subscription';
+
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      mode,
       line_items: [
         {
           price: priceId,
           quantity: 1,
         },
       ],
-      subscription_data: {
-        trial_period_days: 7,
-      },
       success_url: 'https://nuriaai.ctonew.app/app?checkout=success',
       cancel_url: 'https://nuriaai.ctonew.app?checkout=canceled',
-    });
+    };
 
-    res.json({ url: session.url });
+    // Add promo code / discount if provided
+    if (promo_code) {
+      sessionParams.discounts = [{ coupon: promo_code }];
+    }
+
+    // Subscription-specific fields
+    if (mode === 'subscription') {
+      sessionParams.subscription_data = {
+        trial_period_days: 7,
+      };
+    }
+
+    try {
+      const session = await getStripe().checkout.sessions.create(sessionParams);
+      res.json({ url: session.url });
+    } catch (stripeError) {
+      // Check if this was a coupon/promo code error
+      const errMsg = stripeError instanceof Error ? stripeError.message : String(stripeError);
+      if (promo_code && (errMsg.includes('coupon') || errMsg.includes('promo') || errMsg.includes('discount') || errMsg.includes('No such coupon'))) {
+        return res.status(400).json({ error: 'Invalid or expired promo code' });
+      }
+      throw stripeError; // re-throw for the outer catch
+    }
   } catch (err) {
     console.error('[Checkout] Error:', err);
     const message = err instanceof Error ? err.message : 'Failed to create checkout session';
