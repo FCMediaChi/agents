@@ -28,7 +28,9 @@ import {
   Download, 
   Palette, 
   TrendingUp,
-  Lock
+  Lock,
+  Loader2,
+  AlertCircle
 } from 'lucide-react'
 
 // Define the content questionnaires per page type
@@ -109,6 +111,32 @@ function LandingPage() {
   const [brandSecondary, setBrandSecondary] = useState<string>("#4551D3")
   const [brandingLogo, setBrandingLogo] = useState<string>("First Creation Media")
   const [brandLogoFile, setBrandLogoFile] = useState<string>("/logo-blue.png")
+
+  // Checkout state
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [promoCode, setPromoCode] = useState('')
+  const [showPromoCode, setShowPromoCode] = useState(false)
+
+  const handleCheckout = async (tier: 'solo' | 'team', interval: 'monthly' | 'yearly') => {
+    setCheckoutLoading(`${tier}-${interval}`)
+    setCheckoutError(null)
+    try {
+      const body: any = { product: 'blueprint', tier, interval }
+      if (showPromoCode && promoCode.trim()) body.promo_code = promoCode.trim()
+      const res = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok) { setCheckoutError(data.error || 'Failed to start checkout'); setCheckoutLoading(null); return }
+      window.location.href = data.url
+    } catch {
+      setCheckoutError('Network error. Please try again.')
+      setCheckoutLoading(null)
+    }
+  }
 
   function getWireframeBlocks(pageType: string): { title: string; subtitle: string; type: string }[] {
         const blocks: Record<string, { title: string; subtitle: string; type: string }[]> = {
@@ -923,12 +951,14 @@ function LandingPage() {
                   <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($566)
-              </a>
+              <button onClick={() => handleCheckout('solo', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5 disabled:opacity-50 flex items-center justify-center gap-2">
+                {checkoutLoading === 'solo-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Start Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('solo', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                {checkoutLoading === 'solo-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Pay Yearly ($566)'}
+              </button>
             </div>
 
             {/* Team Tier */}
@@ -947,12 +977,14 @@ function LandingPage() {
                   <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Solo, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
                 ))}
               </ul>
-              <a href="https://buy.stripe.com/fZu7sLaYIa7q3EofiefAc09" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/28EdR99UE0wQdeY0nkfAc0a" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($1,430)
-              </a>
+              <button onClick={() => handleCheckout('team', 'monthly')} disabled={checkoutLoading !== null}
+                className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5 disabled:opacity-50 flex items-center justify-center gap-2">
+                {checkoutLoading === 'team-monthly' ? <><Loader2 className="w-4 h-4 animate-spin" /> Redirecting...</> : 'Start Monthly'}
+              </button>
+              <button onClick={() => handleCheckout('team', 'yearly')} disabled={checkoutLoading !== null}
+                className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all disabled:opacity-50 flex items-center justify-center gap-1">
+                {checkoutLoading === 'team-yearly' ? <><Loader2 className="w-3 h-3 animate-spin" /> Redirecting...</> : 'Pay Yearly ($1,430)'}
+              </button>
             </div>
 
             {/* Agency Tier */}
@@ -978,6 +1010,32 @@ function LandingPage() {
               </a>
             </div>
 
+          </div>
+          {/* Promo code UI */}
+          <div className="max-w-6xl mx-auto mt-4 text-center">
+            {checkoutError && (
+              <div className="mb-3 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 text-sm text-red-700 inline-flex">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                {checkoutError}
+                <button onClick={() => setCheckoutError(null)} className="ml-auto text-red-400 hover:text-red-600">&times;</button>
+              </div>
+            )}
+            {!showPromoCode ? (
+              <button onClick={() => setShowPromoCode(true)} className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+                Got a promo code?
+              </button>
+            ) : (
+              <div className="inline-flex items-center gap-2">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Enter code"
+                  className="w-[160px] px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono uppercase tracking-wide focus:border-[#1A9EF2] focus:ring-1 focus:ring-[#C3E8FF] outline-none transition-all"
+                />
+                <button onClick={() => { setShowPromoCode(false); setPromoCode(''); }} className="text-xs text-slate-400 hover:text-slate-600">&times;</button>
+              </div>
+            )}
           </div>
         </div>
       </section>
