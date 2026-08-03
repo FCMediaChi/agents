@@ -117,6 +117,12 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE users ADD COLUMN trial_started_at TEXT'); } catch { /* already exists */ }
   try { db.run('ALTER TABLE users ADD COLUMN trial_ends_at TEXT'); } catch { /* already exists */ }
 
+  // Migration: add email verification & password reset columns
+  try { db.run('ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN verification_token TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN reset_token TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT'); } catch { /* already exists */ }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -413,6 +419,9 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN prospect_url TEXT'); } catch { /* ok */ }
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN audit_results TEXT'); } catch { /* ok */ }
   try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN cold_email TEXT'); } catch { /* ok */ }
+
+  // Add website_type to projects (migration)
+  try { db.run('ALTER TABLE projects ADD COLUMN website_type TEXT'); } catch { /* ok */ }
 
   // Create indexes
   const indexes = [

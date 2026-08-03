@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [showNew, setShowNew] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newWebsiteType, setNewWebsiteType] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
   // Share modal state
@@ -44,9 +45,10 @@ export default function DashboardPage() {
     if (!newTitle.trim()) return;
     setCreating(true);
     try {
-      await api.projects.create(newTitle.trim(), newDesc.trim() || undefined);
+      await api.projects.create(newTitle.trim(), newDesc.trim() || undefined, newWebsiteType);
       setNewTitle('');
       setNewDesc('');
+      setNewWebsiteType(null);
       setShowNew(false);
       await loadProjects();
     } catch (err: any) {
@@ -182,6 +184,16 @@ export default function DashboardPage() {
               placeholder="Brief description (optional)"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-[#1A9EF2] focus:ring-2 focus:ring-[#C3E8FF] outline-none text-sm resize-none h-20"
             />
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-1">Website Type</label>
+              <select value={newWebsiteType ?? ''} onChange={e => setNewWebsiteType(e.target.value || null)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:border-[#1A9EF2] focus:ring-2 focus:ring-[#C3E8FF] outline-none text-sm bg-white">
+                <option value="">— Select type (optional) —</option>
+                <option value="ecommerce">E-Commerce</option>
+                <option value="business">Business (Local Business)</option>
+                <option value="saas">SaaS</option>
+              </select>
+            </div>
             <div className="flex gap-3">
               <button type="submit" disabled={creating || !newTitle.trim()}
                 className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2">

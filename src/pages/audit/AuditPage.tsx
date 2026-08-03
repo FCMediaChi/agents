@@ -161,6 +161,20 @@ export default function AuditPage() {
   const [showTool, setShowTool] = useState(false);
   const [faqOpen, setFaqOpen] = useState<number | null>(null);
 
+  // Paste HTML state
+  const [showPasteModal, setShowPasteModal] = useState(false);
+  const [pasteHtml, setPasteHtml] = useState('');
+  const [pasteUrl, setPasteUrl] = useState('');
+
+  const isFetchError = (errMsg: string | undefined): boolean => {
+    if (!errMsg) return false;
+    const msg = errMsg.toLowerCase();
+    return msg.includes('403') || msg.includes('404') || msg.includes('timeout')
+      || msg.includes('timed out') || msg.includes('dns')
+      || msg.includes('connection refused') || msg.includes('enotfound')
+      || msg.includes('failed to fetch') || msg.includes('econnrefused');
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -170,6 +184,36 @@ export default function AuditPage() {
       const res = await fetch('/api/audit/run', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url }), credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed to start audit'); setLoading(false); return; }
+      setLoading(false); setPolling(true);
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusRes = await fetch(`/api/audit/reports/${data.report_id}/status`, { credentials: 'include' });
+          const statusData = await statusRes.json();
+          if (statusData.status === 'completed' || statusData.status === 'failed') {
+            clearInterval(pollInterval); setPolling(false);
+            const reportRes = await fetch(`/api/audit/reports/${data.report_id}`, { credentials: 'include' });
+            const reportData = await reportRes.json();
+            setReport(reportData);
+          }
+        } catch { clearInterval(pollInterval); setPolling(false); setError('Failed to check audit status'); }
+      }, 2000);
+    } catch { setLoading(false); setError('Network error. Please try again.'); }
+  };
+
+  const handlePasteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pasteHtml.length > 1048576) { setError('HTML exceeds the 1MB client limit. Please reduce the content.'); return; }
+    setError('');
+    setReport(null);
+    setShowPasteModal(false);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/audit/run-html', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ html: pasteHtml, url: pasteUrl }), credentials: 'include',
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed to start audit'); setLoading(false); return; }
@@ -397,7 +441,67 @@ export default function AuditPage() {
                 <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" />
                 <h2 className="text-lg font-bold text-red-800 mb-2">Audit Failed</h2>
                 <p className="text-red-600 text-sm">{report.error || 'Could not analyze this website.'}</p>
-                <button onClick={() => { setReport(null); setUrl(''); }} className="mt-4 text-sm text-red-700 font-medium hover:underline">Try again</button>
+                <div className="flex items-center justify-center gap-3 mt-4">
+                  <button onClick={() => { setReport(null); setUrl(''); }} className="text-sm text-red-700 font-medium hover:underline">Try again</button>
+                  {isFetchError(report.error) && (
+                    <button onClick={() => { setShowPasteModal(true); setPasteUrl(report.target_url || url); }}
+                      className="text-sm font-semibold text-[#1A9EF2] hover:text-[#4551D3] bg-white px-4 py-1.5 rounded-lg border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all">
+                      Paste HTML instead →
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Paste HTML Modal */}
+            {showPasteModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={(e) => { if (e.target === e.currentTarget) setShowPasteModal(false); }}>
+                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-bold text-slate-900">Paste HTML Source</h2>
+                    <button onClick={() => setShowPasteModal(false)} className="text-slate-400 hover:text-slate-600 text-xl leading-none">&times;</button>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Right-click your website → <strong>View Page Source</strong>, then copy everything and paste it below. Enter your website URL too.
+                  </p>
+                  <form onSubmit={handlePasteSubmit}>
+                    <div className="mb-4">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">Website URL</label>
+                      <input type="text" value={pasteUrl} onChange={(e) => setPasteUrl(e.target.value)}
+                        placeholder="https://example.com"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#1A9EF2] focus:ring-2 focus:ring-[#C3E8FF] outline-none text-sm" />
+                    </div>
+                    <div className="mb-2">
+                      <label className="block text-sm font-semibold text-slate-700 mb-1">
+                        HTML Source
+                        <span className="text-slate-400 font-normal ml-1">
+                          ({pasteHtml.length.toLocaleString()} / 1,048,576 characters)
+                        </span>
+                      </label>
+                      <textarea value={pasteHtml} onChange={(e) => {
+                        if (e.target.value.length <= 1048576) setPasteHtml(e.target.value);
+                      }}
+                        placeholder="Paste your website's full HTML source here..."
+                        rows={20}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#1A9EF2] focus:ring-2 focus:ring-[#C3E8FF] outline-none text-xs font-mono resize-y" />
+                    </div>
+                    {pasteHtml.length >= 1048576 && (
+                      <p className="text-xs text-amber-600 mb-3 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Character limit reached (1MB). The content will be trimmed when submitted.
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3">
+                      <button type="submit" disabled={!pasteHtml.trim() || !pasteUrl.trim()}
+                        className="flex-1 py-2.5 rounded-xl font-bold bg-[#1A9EF2] hover:bg-[#4551D3] disabled:bg-slate-300 text-white transition-all text-sm flex items-center justify-center gap-2">
+                        <Search className="w-4 h-4" /> Run Audit from HTML
+                      </button>
+                      <button type="button" onClick={() => setShowPasteModal(false)}
+                        className="px-4 py-2.5 rounded-xl font-medium text-slate-600 hover:text-slate-800 border border-slate-200 hover:bg-slate-50 transition-all text-sm">
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </div>
               </div>
             )}
           </>

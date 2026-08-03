@@ -1,11 +1,11 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { api, type User } from './api';
+import { api, ApiError, type User } from './api';
 
 interface AuthContextValue {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string) => Promise<{ message?: string; verified?: boolean }>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
 }
@@ -32,13 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [checkAuth]);
 
   const login = async (email: string, password: string) => {
-    const u = await api.auth.login(email, password);
-    setUser(u);
+    try {
+      const u = await api.auth.login(email, password);
+      setUser(u);
+    } catch (err) {
+      // Re-throw ApiError so callers can inspect status (e.g., 403 = unverified)
+      throw err;
+    }
   };
 
   const register = async (email: string, password: string) => {
-    const u = await api.auth.register(email, password);
-    setUser(u);
+    const result = await api.auth.register(email, password);
+    // Don't set user — they need to verify first
+    return result;
   };
 
   const logout = async () => {
