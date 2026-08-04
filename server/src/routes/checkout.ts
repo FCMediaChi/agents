@@ -118,6 +118,20 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
       return res.status(400).json({ error: `Invalid interval for ${product}. Must be one of: ${validIntervals.join(', ')}.` });
     }
 
+    // Check promo code redemption cap (max 3 per code+product+tier+interval)
+    // Must happen BEFORE discoverPrices() so it works without Stripe configured
+    if (promo_code) {
+      const db = getDb();
+      const redemptions = db.prepare(
+        'SELECT COUNT(*) as count FROM promo_redemptions WHERE code = ? AND product = ? AND tier = ? AND interval = ?'
+      ).get(promo_code, product, tier, interval) as any;
+      if (redemptions && redemptions.count >= 3) {
+        return res.status(400).json({
+          error: 'Beta spots for this tier have been filled.',
+        });
+      }
+    }
+
     const prices = await discoverPrices();
     const priceId = prices[`${product}:${tier}:${interval}`];
 
@@ -136,19 +150,6 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     // Determine mode: one-time payment for Audit single, subscription for everything else
     const mode: 'payment' | 'subscription' =
       (product === 'audit' && interval === 'one-time') ? 'payment' : 'subscription';
-
-    // Check promo code redemption cap (max 3 per code+product+tier+interval)
-    if (promo_code) {
-      const db = getDb();
-      const redemptions = db.prepare(
-        'SELECT COUNT(*) as count FROM promo_redemptions WHERE code = ? AND product = ? AND tier = ? AND interval = ?'
-      ).get(promo_code, product, tier, interval) as any;
-      if (redemptions && redemptions.count >= 3) {
-        return res.status(400).json({
-          error: 'Beta spots for this tier have been filled.',
-        });
-      }
-    }
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode,
