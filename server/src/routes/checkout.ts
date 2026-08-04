@@ -100,6 +100,12 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
       promo_code?: string;
     };
 
+    // Map user-facing promo codes to Stripe coupon IDs
+    const PROMO_CODE_MAP: Record<string, string> = {
+      'NURIABETA50': 'bjDsBixa',
+    };
+    const stripeCouponId = promo_code ? (PROMO_CODE_MAP[promo_code] || promo_code) : undefined;
+
     if (!tier || !interval) {
       return res.status(400).json({ error: 'tier and interval are required' });
     }
@@ -164,8 +170,8 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     };
 
     // Add promo code / discount if provided
-    if (promo_code) {
-      sessionParams.discounts = [{ coupon: promo_code }];
+    if (stripeCouponId) {
+      sessionParams.discounts = [{ coupon: stripeCouponId }];
     }
 
     // Attach metadata for webhook redemption tracking
