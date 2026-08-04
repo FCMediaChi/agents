@@ -19,6 +19,7 @@ import domainRoutes from './routes/domains.js';
 import pipelineRoutes from './routes/pipeline.js';
 import checkoutRoutes from './routes/checkout.js';
 import inviteCodeRoutes from './routes/inviteCodes.js';
+import webhookRoutes from './routes/webhooks.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -36,6 +37,10 @@ async function main() {
     credentials: true,
   }));
   app.use(cookieParser());
+
+  // Stripe webhook — must mount BEFORE express.json() for raw body access
+  app.use('/api/webhooks', webhookRoutes);
+
   app.use(express.json({ limit: '5mb' }));
 
   // API key auth + rate limiting
