@@ -427,6 +427,18 @@ function initializeSchema(): void {
     )
   `);
 
+  // Promo code redemptions — tracks completed Stripe checkouts that used a promo code
+  db.run(`
+    CREATE TABLE IF NOT EXISTS promo_redemptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      code TEXT NOT NULL,
+      product TEXT NOT NULL,
+      tier TEXT NOT NULL,
+      interval TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
   // Create indexes
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
@@ -443,6 +455,7 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_pipeline_case_studies_user_id ON pipeline_case_studies(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code)',
+    'CREATE INDEX IF NOT EXISTS idx_promo_redemptions_code ON promo_redemptions(code, product, tier, interval)',
     ];
   for (const idx of indexes) {
     try { db.run(idx); } catch { /* may already exist */ }

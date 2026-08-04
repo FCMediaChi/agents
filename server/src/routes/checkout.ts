@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
+import { getDb } from '../db.js';
 
 // Stripe client — initialized lazily so the server can start without STRIPE_SECRET_KEY
 let _stripe: Stripe | null = null;
@@ -120,6 +121,11 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     const prices = await discoverPrices();
     const priceId = prices[`${product}:${tier}:${interval}`];
 
+      // Fallback: Audit Single Use uses a hosted payment link
+      if (product === 'audit' && tier === 'single' && interval === 'one-time') {
+        return res.json({ url: 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02' });
+      }
+
     if (!priceId) {
       console.error('[Checkout] No price found for', product, tier, interval, 'available keys:', Object.keys(prices));
       return res.status(400).json({
@@ -130,6 +136,19 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     // Determine mode: one-time payment for Audit single, subscription for everything else
     const mode: 'payment' | 'subscription' =
       (product === 'audit' && interval === 'one-time') ? 'payment' : 'subscription';
+
+    // Check promo code redemption cap (max 3 per code+product+tier+interval)
+    if (promo_code) {
+      const db = getDb();
+      const redemptions = db.prepare(
+        'SELECT COUNT(*) as count FROM promo_redemptions WHERE code = ? AND product = ? AND tier = ? AND interval = ?'
+      ).get(promo_code, product, tier, interval) as any;
+      if (redemptions && redemptions.count >= 3) {
+        return res.status(400).json({
+          error: 'Beta spots for this tier have been filled.',
+        });
+      }
+    }
 
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode,
@@ -147,6 +166,14 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
     if (promo_code) {
       sessionParams.discounts = [{ coupon: promo_code }];
     }
+
+    // Attach metadata for webhook redemption tracking
+    sessionParams.metadata = {
+      promo_code: promo_code || '',
+      product,
+      tier,
+      interval,
+    };
 
     // Subscription-specific fields
     if (mode === 'subscription') {
