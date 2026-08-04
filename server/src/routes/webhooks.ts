@@ -20,7 +20,11 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req: Re
   
   let event: Stripe.Event;
   try {
-    if (secret && sig) {
+    if (secret) {
+      if (!sig) {
+        res.status(400).json({ error: 'Missing stripe-signature header' });
+        return;
+      }
       const stripe = getStripe();
       event = stripe.webhooks.constructEvent(req.body, sig, secret);
     } else {
