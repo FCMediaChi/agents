@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PIPELINE_PLANS } from '../../lib/pricing';
 import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
 
 const FAQ_ITEMS = [
@@ -137,46 +138,7 @@ export default function PipelineLanding() {
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Start with a 7-day free trial. Then choose a plan.</h2>
           </div>
           <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
-            {[
-              {
-                name: 'Free Trial',
-                price: '$0',
-                period: '7 days',
-                features: ['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'],
-                cta: 'Start Free',
-                href: '/pipeline/register',
-                featured: false,
-              },
-              {
-                name: 'Solo',
-                price: '$79',
-                period: '/mo',
-                yearly: '$758/yr',
-                features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
-                cta: 'Get Started',
-                href: '#',
-                featured: false,
-              },
-              {
-                name: 'Team',
-                price: '$199',
-                period: '/mo',
-                yearly: '$1,910/yr',
-                features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
-                cta: 'Get Started',
-                href: '#',
-                featured: true,
-              },
-              {
-                name: 'Agency',
-                price: 'Call for pricing',
-                period: '',
-                features: ['Everything in Team', 'White-labeling', 'API access', 'Custom yearly pricing', 'Dedicated support'],
-                cta: 'Contact Us',
-                href: '#',
-                featured: false,
-              },
-            ].map((plan: any, i) => (
+            {PIPELINE_PLANS.map((plan: any, i) => (
               <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
                 {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
                 <h3 className="text-lg font-bold text-slate-900 mb-2">{plan.name}</h3>

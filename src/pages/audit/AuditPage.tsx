@@ -1,11 +1,6 @@
 import { useState } from 'react';
+import { AUDIT_PLANS } from '../../lib/pricing';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
-
-const STRIPE_SINGLE = 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02';
-const STRIPE_TEAM_MONTHLY = 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03';
-const STRIPE_TEAM_YEARLY = 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05';
-const STRIPE_AGENCY_MONTHLY = 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04';
-const STRIPE_AGENCY_YEARLY = 'https://buy.stripe.com/5kQ9AT6Is7Ziej23gmifAc05';
 
 interface AuditCheck {
   check_name: string;
@@ -145,12 +140,7 @@ const FAQ_ITEMS = [
   { q: 'What\'s included in each plan?', a: 'Free: homepage-only audit. Single Use ($29): full 7-dimension audit for 1 website. Team ($49/mo or $470/yr): up to 10 websites, 5 user seats, full audits. Agency ($79/mo or $755/yr): unlimited websites, unlimited users, white-labeling, client management.' },
 ];
 
-const PLANS = [
-  { name: 'Free', price: '$0', desc: 'Homepage audit only', features: ['1 homepage-only audit', 'Single dimension report', 'No account required'], cta: 'Try Free', href: '#audit-form', featured: false },
-  { name: 'Single Use', price: '$29', desc: 'One-time full audit', features: ['Full 7-dimension report', '1 website', 'PDF export', 'Email delivery'], cta: 'Buy Now', href: STRIPE_SINGLE, featured: false },
-  { name: 'Team', price: '$49', desc: 'Per month or $470/yr', features: ['Up to 10 websites', 'Up to 5 user seats', 'Full 7-dimension reports', 'Team dashboard', 'PDF exports & history', 'Priority support'], cta: 'Start Monthly', href: STRIPE_TEAM_MONTHLY, featured: true, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_TEAM_YEARLY },
-  { name: 'Agency', price: '$79', desc: 'Per month or $755/yr', features: ['Unlimited websites', 'White-labeling (no resell)', 'Client management', 'Full 7-dimension reports', 'Reports history', 'Branded PDF exports', 'Priority support'], cta: 'Start Monthly', href: STRIPE_AGENCY_MONTHLY, featured: false, secondaryCta: 'Pay Yearly', secondaryHref: STRIPE_AGENCY_YEARLY },
-];
+const PLANS = AUDIT_PLANS;
 
 export default function AuditPage() {
   const [url, setUrl] = useState('');

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
+import { BLUEPRINT_PLANS } from './lib/pricing'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -888,95 +889,38 @@ function LandingPage() {
 
           <div className="grid lg:grid-cols-4 gap-6 items-stretch max-w-6xl mx-auto">
             
-            {/* Free Tier */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
-              <div className="mb-5">
-                <h3 className="text-lg font-extrabold text-slate-900">Free</h3>
-                <p className="text-slate-500 text-xs mt-1">For exploring the tool</p>
-                <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$0</span>
-                  <span className="text-xs text-slate-400 ml-1">/ forever</span>
+            {BLUEPRINT_PLANS.map((plan) => (
+              <div key={plan.name} className={`bg-white rounded-2xl p-6 ${plan.featured ? 'border-2 border-[#1A9EF2] shadow-lg shadow-[#1A9EF2]/10 relative' : 'border border-slate-200'} flex flex-col`}>
+                {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-[10px] font-bold rounded-full whitespace-nowrap">Most Popular</div>}
+                <div className="mb-5">
+                  <h3 className="text-lg font-extrabold text-slate-900">{plan.name}</h3>
+                  <p className="text-slate-500 text-xs mt-1">{plan.tagline}</p>
+                  <div className="mt-3">
+                    <span className="text-3xl font-extrabold">{plan.price}</span>
+                    {plan.period && <span className="text-xs text-slate-400 ml-1">{plan.period}</span>}
+                  </div>
                 </div>
+                <ul className="space-y-2 mb-6 flex-1 text-xs">
+                  {plan.features.map(f => (
+                    <li key={f} className={`flex items-start gap-2 text-slate-600 ${f.startsWith('Everything in') ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
+                  ))}
+                </ul>
+                {plan.yearlyHref ? (
+                  <>
+                    <a href={plan.href} target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
+                      {plan.cta}
+                    </a>
+                    <a href={plan.yearlyHref} target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
+                      Pay Yearly ({plan.yearlyPrice})
+                    </a>
+                  </>
+                ) : (
+                  <a href={plan.href} className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
+                    {plan.cta}
+                  </a>
+                )}
               </div>
-              <ul className="space-y-2 mb-6 flex-1 text-xs">
-                {["1 project (lifetime)", "1 user seat", "Sitemap builder", "Page outlines", "Basic wireframe blocks", "Content questionnaires"].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
-                ))}
-              </ul>
-              <a href="/register" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
-                Get Started Free
-              </a>
-            </div>
-
-            {/* Solo Tier */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
-              <div className="mb-5">
-                <h3 className="text-lg font-extrabold text-slate-900">Solo</h3>
-                <p className="text-slate-500 text-xs mt-1">For freelance designers</p>
-                <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$59</span>
-                  <span className="text-xs text-slate-400 ml-1">/ month</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-6 flex-1 text-xs">
-                {["5 projects per month", "1 user seat", "Advanced wireframe blocks (50+)", "PDF proposal export", "Custom proposal branding", "Email support"].map(f => (
-                  <li key={f} className="flex items-start gap-2 text-slate-600"><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
-                ))}
-              </ul>
-              <a href="https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($566)
-              </a>
-            </div>
-
-            {/* Team Tier */}
-            <div className="bg-white rounded-2xl p-6 border-2 border-[#1A9EF2] shadow-lg shadow-[#1A9EF2]/10 flex flex-col relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-[10px] font-bold rounded-full whitespace-nowrap">Most Popular</div>
-              <div className="mb-5">
-                <h3 className="text-lg font-extrabold text-slate-900">Team</h3>
-                <p className="text-slate-500 text-xs mt-1">For small agencies</p>
-                <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$149</span>
-                  <span className="text-xs text-slate-400 ml-1">/ month</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-6 flex-1 text-xs">
-                {["10 projects per month", "Up to 5 user seats", "Everything in Solo, plus:", "Invite team members & clients", "Client-facing portal", "Comment & approval workflow", "Interactive HTML export", "Google Docs / Word export", "Sitemap template library (10 industries)", "50+ wireframe block templates", "Industry-specific questionnaire bundles", "Priority support"].map(f => (
-                  <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Solo, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
-                ))}
-              </ul>
-              <a href="https://buy.stripe.com/fZu7sLaYIa7q3EofiefAc09" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/28EdR99UE0wQdeY0nkfAc0a" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($1,430)
-              </a>
-            </div>
-
-            {/* Agency Tier */}
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 flex flex-col">
-              <div className="mb-5">
-                <h3 className="text-lg font-extrabold text-slate-900">Agency</h3>
-                <p className="text-slate-500 text-xs mt-1">For growing agencies</p>
-                <div className="mt-3">
-                  <span className="text-3xl font-extrabold">$297</span>
-                  <span className="text-xs text-slate-400 ml-1">/ month</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-6 flex-1 text-xs">
-                {["Unlimited projects", "Unlimited user seats", "Everything in Team, plus:", "API access (REST API + keys)", "Custom domain for client portals", "White-labeling (remove Nuria branding)", "Export to Webflow, WordPress & Framer", "Priority support"].map(f => (
-                  <li key={f} className={`flex items-start gap-2 text-slate-600 ${f === 'Everything in Team, plus:' ? 'font-bold text-slate-800' : ''}`}><Check className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />{f}</li>
-                ))}
-              </ul>
-              <a href="https://buy.stripe.com/8x2cN55Eo6Veej20nkfAc0b" target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all mb-1.5">
-                Start Monthly
-              </a>
-              <a href="https://buy.stripe.com/cNicN50k46Ve8YI2vsfAc0c" target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
-                Pay Yearly ($2,580)
-              </a>
-            </div>
+            ))}
 
           </div>
         </div>
