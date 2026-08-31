@@ -137,20 +137,12 @@ export const PRICING = {
     },
   },
   pipeline: {
-    free: {
-      name: 'Free Trial',
-      price: '$0',
-      period: '7 days',
-      features: ['Full access to all features', 'Up to 3 case studies', 'Up to 3 cold pitches', 'PDF export'],
-      cta: 'Start Free',
-      href: '/pipeline/register',
-      featured: false,
-    },
     solo: {
       name: 'Solo',
       price: '$79',
       period: '/mo',
       yearly: '$758/yr',
+      tagline: '7-day free trial included',
       features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
       cta: 'Get Started',
       href: '#',
@@ -161,6 +153,7 @@ export const PRICING = {
       price: '$199',
       period: '/mo',
       yearly: '$1,910/yr',
+      tagline: '7-day free trial included',
       features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
       cta: 'Get Started',
       href: '#',
@@ -192,7 +185,6 @@ export const AUDIT_PLANS: Plan[] = [
   PRICING.audit.agency,
 ];
 export const PIPELINE_PLANS: Plan[] = [
-  PRICING.pipeline.free,
   PRICING.pipeline.solo,
   PRICING.pipeline.team,
   PRICING.pipeline.agency,
