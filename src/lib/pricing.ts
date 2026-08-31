@@ -6,7 +6,7 @@
 // Values mirror the ratified business plan:
 //   Blueprint:  Free $0 · Solo $59/mo ($566/yr) · Team $149/mo ($1,430/yr) · Agency "Call for pricing"
 //   Audit:      Free $0 · Single $29 · Team $49/mo ($470/yr) · Agency $79/mo ($755/yr)
-//   Pipeline:   Free 7-day trial · Solo $79/mo ($758/yr) · Team $199/mo ($1,910/yr) · Agency "Call for pricing"
+//   Pipeline:   Solo $79/mo ($758/yr) · Team $199/mo ($1,910/yr) · Agency "Contact for Pricing" (7-day trial built into Solo/Team)
 
 export interface Plan {
   name: string;
@@ -25,6 +25,7 @@ export interface Plan {
   yearlyHref?: string; // Blueprint annual checkout URL
   secondaryCta?: string; // Audit yearly CTA label
   secondaryHref?: string; // Audit yearly checkout URL
+  contactEmail?: string; // visible email address shown beneath a mailto CTA
 }
 
 const STRIPE = {
@@ -51,8 +52,8 @@ export const PRICING = {
       period: '/ forever',
       tagline: 'For exploring the tool',
       features: ['1 project (lifetime)', '1 user seat', 'Sitemap builder', 'Page outlines', 'Basic wireframe blocks', 'Content questionnaires'],
-      cta: 'Get Started Free',
-      href: '/register',
+      cta: 'Get Started',
+      href: 'https://nuria.firstcreationmedia.com/#products',
       featured: false,
     },
     solo: {
@@ -145,7 +146,7 @@ export const PRICING = {
       tagline: '7-day free trial included',
       features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
       cta: 'Get Started',
-      href: '#',
+      href: '/pipeline/register',
       featured: false,
     },
     team: {
@@ -156,16 +157,17 @@ export const PRICING = {
       tagline: '7-day free trial included',
       features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
       cta: 'Get Started',
-      href: '#',
+      href: '/pipeline/register',
       featured: true,
     },
     agency: {
       name: 'Agency',
-      price: 'Call for pricing',
+      price: 'Contact for Pricing',
       period: '',
       features: ['Everything in Team', 'White-labeling', 'API access', 'Custom yearly pricing', 'Dedicated support'],
       cta: 'Contact Us',
-      href: '#',
+      href: 'mailto:sales@nuria.firstcreationmedia.com',
+      contactEmail: 'sales@nuria.firstcreationmedia.com',
       featured: false,
     },
   },

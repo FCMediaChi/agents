@@ -18,6 +18,8 @@ import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
 import pipelineRoutes from './routes/pipeline.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
+import { startRateLimitCleanup, stopRateLimitCleanup } from './rateLimit.js';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -130,11 +132,29 @@ async function main() {
   // Initialize database
   await initDb();
 
-  // Start server
-  const server = app.listen(config.port, '0.0.0.0', () => {
-    console.log(`[Nuria Website Blueprint] Server running on http://0.0.0.0:${config.port}`);
-    console.log(`[Nuria Website Blueprint] Environment: ${config.nodeEnv}`);
-  });
+  // Start periodic rate-limit cleanup (sweeps expired entries every 15 min)
+  startRateLimitCleanup();
+
+  // Start server with EADDRINUSE retry (platform placeholder may hold the port briefly)
+  let server: ReturnType<typeof app.listen> | null = null;
+  const tryListen = (retries: number): void => {
+    server = app.listen(config.port, '0.0.0.0', () => {
+      console.log(`[Nuria Website Blueprint] Server running on http://0.0.0.0:${config.port}`);
+      console.log(`[Nuria Website Blueprint] Environment: ${config.nodeEnv}`);
+    });
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE' && retries > 0) {
+        console.log(`[Nuria Website Blueprint] Port ${config.port} in use, retrying (${retries} left)...`);
+        try { execSync('pkill -9 -f "bun run dev"', { stdio: 'ignore' }); } catch {}
+        try { execSync(`fuser -k ${config.port}/tcp`, { stdio: 'ignore' }); } catch {}
+        setTimeout(() => tryListen(retries - 1), 1000);
+      } else {
+        console.error('[Nuria Website Blueprint] Failed to bind port:', err);
+        throw err;
+      }
+    });
+  };
+  tryListen(15);
 
   // Auto-persist DB periodically (every 10 seconds)
   const persistInterval = setInterval(() => persistDb(), 10000);
@@ -143,9 +163,10 @@ async function main() {
   const shutdown = () => {
     console.log('[Nuria Website Blueprint] Shutting down...');
     clearInterval(persistInterval);
+    stopRateLimitCleanup();
     persistDb();
     closeDb();
-    server.close(() => process.exit(0));
+    server?.close(() => process.exit(0));
   };
 
   process.on('SIGINT', shutdown);

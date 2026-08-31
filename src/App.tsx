@@ -16,6 +16,7 @@ import PipelineOnboarding from './pages/pipeline/PipelineOnboarding'
 import PipelineDashboard from './pages/pipeline/PipelineDashboard'
 import PipelineCaseStudy from './pages/pipeline/PipelineCaseStudy'
 import ColdPitchBuilder from './pages/pipeline/ColdPitchBuilder'
+import SupportPage from './pages/SupportPage'
 import { 
   Compass, 
   Layers, 
@@ -261,11 +262,11 @@ function LandingPage() {
             >
               Sign In
             </a>
-            <a 
-              href="/register" 
+            <a
+              href="https://nuria.firstcreationmedia.com/#products"
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md hover:shadow-lg shadow-[#1A9EF2]/10"
             >
-              Start Free
+              Get Started
             </a>
           </div>
         </div>
@@ -988,6 +989,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/audit" element={<AuditPage />} />
+      <Route path="/support" element={<SupportPage />} />
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
       <Route path="/register" element={user ? <Navigate to="/app" replace /> : <RegisterPage />} />

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../lib/auth';
+import { api, ApiError } from '../lib/api';
 import { Compass, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -8,18 +9,42 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setUnverifiedEmail(null);
+    setResendMessage('');
     setLoading(true);
     try {
       await login(email, password);
       window.location.href = '/app';
     } catch (err: any) {
-      setError(err.message || 'Login failed');
+      if (err instanceof ApiError && err.status === 403) {
+        setUnverifiedEmail(err.body?.email || email);
+        setError('Please verify your email. Check your inbox.');
+      } else {
+        setError(err.message || 'Login failed');
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!unverifiedEmail) return;
+    setResending(true);
+    setResendMessage('');
+    try {
+      const result = await api.auth.resendVerification(unverifiedEmail);
+      setResendMessage(result.message);
+    } catch (err: any) {
+      setResendMessage(err.message || 'Failed to resend. Try again later.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -38,8 +63,21 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
           {error && (
-            <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl border border-red-200">
+            <div className={`${unverifiedEmail ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-600 border-red-200'} text-sm p-3 rounded-xl border`}>
               {error}
+              {unverifiedEmail && (
+                <button
+                  type="button"
+                  onClick={handleResend}
+                  disabled={resending}
+                  className="block mt-2 text-[#1A9EF2] font-semibold hover:underline text-xs disabled:opacity-50"
+                >
+                  {resending ? 'Sending...' : 'Resend verification email'}
+                </button>
+              )}
+              {resendMessage && (
+                <p className="text-xs text-green-600 mt-1">{resendMessage}</p>
+              )}
             </div>
           )}
 
@@ -56,7 +94,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-1">Password</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-semibold text-slate-700">Password</label>
+              <a href="/forgot-password" className="text-xs text-[#1A9EF2] hover:underline font-medium">
+                Forgot Password?
+              </a>
+            </div>
             <input
               type="password"
               value={password}

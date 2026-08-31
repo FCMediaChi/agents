@@ -117,6 +117,12 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE users ADD COLUMN trial_started_at TEXT'); } catch { /* already exists */ }
   try { db.run('ALTER TABLE users ADD COLUMN trial_ends_at TEXT'); } catch { /* already exists */ }
 
+  // Migration: add email verification & password reset columns
+  try { db.run('ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN verification_token TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN reset_token TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT'); } catch { /* already exists */ }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,

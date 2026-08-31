@@ -33,7 +33,17 @@ export interface Page {
   updated_at: string;
 }
 
-interface ApiError {
+export class ApiError extends Error {
+  status: number;
+  body: any;
+  constructor(status: number, body: any) {
+    super(body?.message || body?.error || `HTTP ${status}`);
+    this.status = status;
+    this.body = body;
+  }
+}
+
+interface ApiResponseError {
   error: string;
   message?: string;
   details?: any;
@@ -50,8 +60,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const err: ApiError = await res.json().catch(() => ({ error: 'Request failed' }));
-    throw new Error(err.message || err.error || `HTTP ${res.status}`);
+    const body: ApiResponseError = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new ApiError(res.status, body);
   }
 
   return res.json();
@@ -61,13 +71,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   auth: {
     register: (email: string, password: string) =>
-      request<User>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
+      request<{ id: string; email: string; message?: string; verified?: boolean }>('/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
     login: (email: string, password: string) =>
       request<User>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
     logout: () =>
       request<{ success: boolean }>('/auth/logout', { method: 'POST' }),
     me: () =>
       request<{ user: User }>('/auth/me'),
+    verify: (token: string) =>
+      request<{ success: boolean; message: string }>('/auth/verify', { method: 'POST', body: JSON.stringify({ token }) }),
+    resendVerification: (email: string) =>
+      request<{ success: boolean; message: string }>('/auth/resend-verification', { method: 'POST', body: JSON.stringify({ email }) }),
+    forgotPassword: (email: string) =>
+      request<{ success: boolean; message: string }>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (token: string, newPassword: string) =>
+      request<{ success: boolean; message: string }>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, newPassword }) }),
   },
 
   // Projects

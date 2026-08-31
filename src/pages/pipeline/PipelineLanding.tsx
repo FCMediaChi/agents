@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PIPELINE_PLANS } from '../../lib/pricing';
+import { useTitle } from '../../lib/useTitle';
 import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
 
 const FAQ_ITEMS = [
@@ -17,6 +18,7 @@ const HOW_IT_WORKS = [
 ];
 
 export default function PipelineLanding() {
+  useTitle('Nuria Client Pipeline | Nuria AI');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -35,7 +37,7 @@ export default function PipelineLanding() {
           </nav>
           <div className="flex items-center gap-4">
             <a href="/pipeline/login" className="text-sm font-semibold text-[#1A9EF2] hover:text-[#4551D3] transition-colors">Sign In</a>
-            <a href="/pipeline/register" className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md hover:shadow-lg">Start Free Trial</a>
+            <a href="/pipeline/register" className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md hover:shadow-lg">Get Started</a>
           </div>
         </div>
       </header>
@@ -57,7 +59,7 @@ export default function PipelineLanding() {
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
               <a href="/pipeline/register" className="px-8 py-3.5 rounded-xl text-base font-semibold bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-lg hover:shadow-xl shadow-[#1A9EF2]/20 w-full sm:w-auto text-center">
-                Start Free Trial
+                Get Started
               </a>
               <a href="#features" className="px-8 py-3.5 rounded-xl text-base font-semibold border-2 border-slate-200 text-slate-700 hover:border-[#1A9EF2] hover:text-[#1A9EF2] transition-all w-full sm:w-auto text-center">
                 See Features
@@ -137,7 +139,7 @@ export default function PipelineLanding() {
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Start with a 7-day free trial. Then choose a plan.</h2>
           </div>
-          <div className="grid md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             {PIPELINE_PLANS.map((plan: any, i) => (
               <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
                 {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
@@ -164,6 +166,9 @@ export default function PipelineLanding() {
                   {plan.features.map((f: string, j: number) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
                 </ul>
                 <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]'}`}>{plan.cta}</a>
+                {plan.contactEmail && (
+                  <p className="mt-2 text-center text-xs text-slate-500 break-all">{plan.contactEmail}</p>
+                )}
               </div>
             ))}
           </div>
@@ -175,7 +180,7 @@ export default function PipelineLanding() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <div className="flex items-center gap-3 text-white"><Clock className="w-6 h-6" /><span className="text-lg font-semibold">7-Day Free Trial — No Credit Card Required</span></div>
-            <a href="/pipeline/register" className="px-6 py-3 rounded-xl bg-white text-[#1A9EF2] font-semibold hover:bg-slate-100 transition-all shadow-md">Start Free Trial</a>
+            <a href="/pipeline/register" className="px-6 py-3 rounded-xl bg-white text-[#1A9EF2] font-semibold hover:bg-slate-100 transition-all shadow-md">Get Started</a>
           </div>
         </div>
       </section>

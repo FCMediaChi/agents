@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AUDIT_PLANS } from '../../lib/pricing';
+import { useTitle } from '../../lib/useTitle';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
 
 interface AuditCheck {
@@ -143,6 +144,7 @@ const FAQ_ITEMS = [
 const PLANS = AUDIT_PLANS;
 
 export default function AuditPage() {
+  useTitle('Nuria Website Audit | Nuria AI');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -314,7 +316,7 @@ export default function AuditPage() {
             <h2 className="text-2xl font-extrabold mb-3">Ready to Audit Your Website?</h2>
             <p className="text-white/80 mb-6 max-w-lg mx-auto">Get your free audit report in under a minute. No signup required for the first audit.</p>
             <button onClick={() => setShowTool(true)} className="px-8 py-3 rounded-xl font-bold bg-white text-[#1A9EF2] hover:bg-[#C3E8FF] transition-all shadow-lg text-base">
-              <Search className="w-4 h-4 inline mr-2" /> Start Free Audit
+              <Search className="w-4 h-4 inline mr-2" /> Get Started
             </button>
           </div>
         ) : (
