@@ -102,7 +102,7 @@ export default function PipelineRegister() {
               className="w-full py-2.5 rounded-xl bg-[#1A9EF2] text-white font-semibold hover:bg-[#4551D3] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-md flex items-center justify-center gap-2"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Start Free Trial
+              Get Started
             </button>
           </form>
 
