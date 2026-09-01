@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
+import { useTitle } from './lib/useTitle'
 import { BLUEPRINT_PLANS } from './lib/pricing'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
@@ -101,6 +102,7 @@ function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function LandingPage() {
+  useTitle('Nuria Website Blueprint | Nuria AI');
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")
@@ -919,6 +921,9 @@ function LandingPage() {
                   <a href={plan.href} className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
                     {plan.cta}
                   </a>
+                )}
+                {plan.contactEmail && (
+                  <p className="mt-2 text-center text-xs text-slate-500 break-all">{plan.contactEmail}</p>
                 )}
               </div>
             ))}
