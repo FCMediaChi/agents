@@ -4,13 +4,13 @@
 // individual components that get lost on branch switches or rebuilds.
 //
 // Values mirror the ratified business plan:
-//   Blueprint:  Free $0 · Solo $59/mo ($566/yr) · Team $149/mo ($1,430/yr) · Agency "Call for pricing"
+//   Blueprint:  Free $0 · Solo $59/mo ($566/yr) · Team $149/mo ($1,430/yr) · Agency "Contact for pricing"
 //   Audit:      Free $0 · Single $29 · Team $49/mo ($470/yr) · Agency $79/mo ($755/yr)
 //   Pipeline:   Solo $79/mo ($758/yr) · Team $199/mo ($1,910/yr) · Agency "Contact for Pricing" (7-day trial built into Solo/Team)
 
 export interface Plan {
   name: string;
-  price: string; // "$59" or "Call for pricing"
+  price: string; // "$59" or "Contact for pricing"
   period: string; // "/ month", "/mo", "7 days", "" ...
   features: string[];
   cta: string;
@@ -34,7 +34,7 @@ const STRIPE = {
   auditTeamMonthly: 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03',
   auditTeamYearly: 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05',
   auditAgencyMonthly: 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04',
-  auditAgencyYearly: 'https://buy.stripe.com/5kQ9AT6Is7Ziej23gmifAc05',
+  auditAgencyYearly: 'https://buy.stripe.com/eVq3cv1bDf1tfIO3sc7Re0c',
   // Blueprint checkout links
   blueprintSoloMonthly: 'https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07',
   blueprintSoloYearly: 'https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08',
@@ -82,12 +82,13 @@ export const PRICING = {
     },
     agency: {
       name: 'Agency',
-      price: 'Call for pricing',
+      price: 'Contact for pricing',
       period: '',
       tagline: 'For growing agencies',
       features: ['Unlimited projects', 'Unlimited user seats', 'Everything in Team, plus:', 'API access (REST API + keys)', 'Custom domain for client portals', 'White-labeling (remove Nuria branding)', 'Export to Webflow, WordPress & Framer', 'Priority support'],
       cta: 'Contact Us',
-      href: `mailto:${SUPPORT_EMAIL}`,
+      href: 'mailto:sales@nuria.firstcreationmedia.com',
+      contactEmail: 'sales@nuria.firstcreationmedia.com',
       featured: false,
     },
   },
