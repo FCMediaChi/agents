@@ -8,7 +8,7 @@ app** from the Nuria Website Blueprint / Audit / Pipeline products — it has it
 database, login, and routes, sharing only the Nuria brand identity.
 
 This repository contains the Blueprint/Audit/Pipeline app (root) and this QA Assistant app under
-`qa-assistant/`. The QA Assistant is built and deployed independently.
+`qa-app/`. The QA Assistant is built and deployed independently.
 
 > **Phase 1 status:** authentication + database + project management are implemented. The checklist
 > engine, scoring, launch-readiness, autosave, AI assistant, and reports are planned for later
@@ -24,7 +24,7 @@ This repository contains the Blueprint/Audit/Pipeline app (root) and this QA Ass
 ## Directory layout
 
 ```
-qa-assistant/
+qa-app/
   server/src/          # Express backend
     index.ts           # App bootstrap + static serving
     db.ts              # sql.js init + normalized schema
@@ -43,7 +43,7 @@ qa-assistant/
 ## Getting started
 
 ```bash
-cd qa-assistant
+cd qa-app
 npm install
 # Terminal 1 — API server (port 3101)
 npm run dev:server
@@ -56,8 +56,8 @@ Environment variables (all optional):
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `PORT` | `3101` | API/static server port |
-| `JWT_SECRET` | random (per-process) | Session signing secret — set in production for stable sessions |
-| `DB_PATH` | `./data/qa-assistant.db` | SQLite file path |
+| `QA_JWT_SECRET` | random (per-process) | Session signing secret — set in production for stable sessions |
+| `QA_DB_PATH` | `./server/data/qa.sqlite` | SQLite file path |
 | `CORS_ORIGIN` | `http://localhost:3100` | Allowed CORS origin |
 | `COOKIE_NAME` | `qa_token` | Auth cookie name |
 | `NODE_ENV` | `development` | Set `production` to enable `secure` cookies |
