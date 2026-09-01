@@ -164,7 +164,7 @@ export const PRICING = {
       name: 'Agency',
       price: 'Contact for Pricing',
       period: '',
-      features: ['Everything in Team', 'White-labeling', 'API access', 'Custom yearly pricing', 'Dedicated support'],
+      features: ['Everything in Team', 'White-labeling', 'API access', 'Custom pricing', 'Dedicated support'],
       cta: 'Contact Us',
       href: 'mailto:sales@nuria.firstcreationmedia.com',
       contactEmail: 'sales@nuria.firstcreationmedia.com',
