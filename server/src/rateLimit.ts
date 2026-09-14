@@ -87,3 +87,37 @@ export function clearRateLimit(ip: string, email: string): void {
   ipMap.delete(ip);
   emailMap.delete(email);
 }
+
+/** Periodic cleanup: sweep expired entries to prevent memory leaks. */
+const CLEANUP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
+function sweepExpired(map: Map<string, RateLimitEntry>): void {
+  const now = Date.now();
+  for (const [key, entry] of map) {
+    const expired =
+      (entry.blockedUntil && now >= entry.blockedUntil) ||
+      (now - entry.firstAttempt > WINDOW_MS);
+    if (expired) {
+      map.delete(key);
+    }
+  }
+}
+
+let cleanupTimer: ReturnType<typeof setInterval> | null = null;
+
+export function startRateLimitCleanup(): void {
+  if (cleanupTimer) return;
+  cleanupTimer = setInterval(() => {
+    sweepExpired(ipMap);
+    sweepExpired(emailMap);
+  }, CLEANUP_INTERVAL_MS);
+  // Unref so it doesn't block process exit
+  if (cleanupTimer.unref) cleanupTimer.unref();
+}
+
+export function stopRateLimitCleanup(): void {
+  if (cleanupTimer) {
+    clearInterval(cleanupTimer);
+    cleanupTimer = null;
+  }
+}
