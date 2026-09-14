@@ -35,7 +35,7 @@ async function fetchUrl(targetUrl: string): Promise<FetchResult> {
     const response = await fetch(normalizedUrl, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; NuriaAudit/1.0; +https://firstcreationmedia.com)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.5',
       },
@@ -99,6 +99,140 @@ function buildOverallSummary(dimensions: AuditDimension[], overallScore: number)
   }
 
   return summary;
+}
+
+/**
+ * Run a full audit from pre-fetched HTML instead of fetching a URL.
+ * Identical pipeline to runAudit() from cheerio.load onward — skips fetchUrl().
+ */
+export async function runAuditFromHtml(html: string, sourceUrl: string, tier: string): Promise<AuditReport> {
+  const reportId = crypto.randomUUID
+    ? crypto.randomUUID()
+    : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.random() * 16 | 0;
+        return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+      });
+
+  const report: AuditReport = {
+    id: reportId,
+    target_url: sourceUrl,
+    overall_score: 0,
+    overall_grade: 'average',
+    status: 'running',
+    summary: '',
+    dimensions: [],
+    created_at: new Date().toISOString(),
+  };
+
+  try {
+    // Validate HTML is non-empty
+    if (!html || html.trim().length === 0) {
+      report.status = 'failed';
+      report.error = 'No HTML content provided for audit.';
+      report.summary = 'Unable to audit: empty HTML content.';
+      return report;
+    }
+
+    // Parse HTML with Cheerio — gracefully handles malformed HTML
+    let $: cheerio.CheerioAPI;
+    try {
+      $ = cheerio.load(html);
+    } catch {
+      report.status = 'failed';
+      report.error = 'Failed to parse the provided HTML content.';
+      report.summary = 'Unable to audit: the HTML could not be parsed (malformed or invalid).';
+      return report;
+    }
+
+    const input: CheckerInput = {
+      $,
+      url: sourceUrl,
+      html,
+    };
+
+    // Run checkers — same pipeline as runAudit()
+    const allCheckers = [
+      analyzeHomepage,
+      analyzeMobile,
+      analyzeBranding,
+      analyzeNavigation,
+      analyzeTrust,
+      analyzeConversion,
+      analyzeAccessibility,
+    ];
+
+    let checkerResults;
+    if (tier === 'free') {
+      const homepageResult = analyzeHomepage(input);
+      const lockedDimensions = allCheckers.slice(1).map((fn) => {
+        const info = fn(input);
+        return {
+          dimension: info.dimension,
+          label: info.label,
+          icon: info.icon,
+          checks: [{
+            check_name: `${info.dimension}_locked`,
+            label: `${info.label} Analysis`,
+            passed: false,
+            severity: 'info' as const,
+            detail: 'Available on paid plans',
+            recommendation: 'Upgrade to Single Use ($29) or Team ($49/mo) for full access to all 7 dimensions.',
+          }],
+        };
+      });
+      checkerResults = [homepageResult, ...lockedDimensions];
+    } else {
+      checkerResults = allCheckers.map(fn => fn(input));
+    }
+
+    // Convert to dimensions with scores
+    const dimensions: AuditDimension[] = checkerResults.map(r => {
+      const isLocked = r.checks.length === 1 && r.checks[0].check_name.endsWith('_locked');
+      if (isLocked) {
+        return {
+          dimension: r.dimension,
+          label: r.label,
+          score: 0,
+          grade: 'fail' as const,
+          icon: r.icon,
+          summary: `🔒 ${r.label}: Upgrade to access this dimension.`,
+          checks: r.checks,
+        };
+      }
+      const score = calculateDimensionScore(r.checks);
+      return {
+        dimension: r.dimension,
+        label: r.label,
+        score,
+        grade: calculateDimensionGrade(score),
+        icon: r.icon,
+        summary: generateDimensionSummary(r.checks, r.label),
+        checks: r.checks,
+      };
+    });
+
+    // Calculate overall weighted score
+    let overallScore = 0;
+    for (const dim of dimensions) {
+      const weight = DIMENSION_WEIGHTS[dim.dimension] || 0.14;
+      overallScore += dim.score * weight;
+    }
+    overallScore = Math.round(overallScore);
+
+    const overallSummary = buildOverallSummary(dimensions, overallScore);
+
+    report.overall_score = overallScore;
+    report.overall_grade = calculateGrade(overallScore);
+    report.dimensions = dimensions;
+    report.summary = overallSummary;
+    report.status = 'completed';
+  } catch (err) {
+    report.status = 'failed';
+    report.error = err instanceof Error ? err.message : 'An unexpected error occurred during analysis.';
+    report.summary = `Audit failed: ${report.error}`;
+  }
+
+  return report;
 }
 
 export async function runAudit(url: string, options?: { tier?: string }): Promise<AuditReport> {

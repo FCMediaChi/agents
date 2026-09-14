@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 
+import { getDb } from '../db.js';
 // ── Audit protections ──────────────────────────────────────────
 
 // IP-based rate limit: 3 audits per IP per 24h (free tier)
@@ -26,7 +27,7 @@ export function auditIPRateLimit(req: any, res: Response, next: NextFunction): v
 
 // Single audit queue per user (max 1 running)
 export function singleAuditQueue(req: any, res: Response, next: NextFunction): void {
-  const { getDb } = require('../db.js');
+  
   const db = getDb();
   const userId = req.user?.userId;
   if (!userId) { next(); return; }
@@ -124,7 +125,7 @@ export function projectCreateCooldown(req: any, res: Response, next: NextFunctio
 
 // Max sitemap pages: 50 cap
 export function maxPageLimit(req: any, res: Response, next: NextFunction): void {
-  const { getDb } = require('../db.js');
+  
   const db = getDb();
   const projectId = req.params.projectId || req.body?.project_id;
   if (!projectId) { next(); return; }
