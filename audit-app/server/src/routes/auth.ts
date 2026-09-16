@@ -18,6 +18,7 @@ function setAuthCookie(res: Response, token: string): void {
     secure: isProd,
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
   });
 }
 
@@ -26,6 +27,7 @@ function clearAuthCookie(res: Response): void {
     httpOnly: true,
     secure: isProd,
     sameSite: 'strict',
+    ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
   });
 }
 
