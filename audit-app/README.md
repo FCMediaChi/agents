@@ -61,6 +61,8 @@ Environment variables (all optional):
 | `AUDIT_DB_PATH` | `./server/data/audit.sqlite` | SQLite file path |
 | `CORS_ORIGIN` | `http://localhost:3103` | Allowed CORS origin |
 | `COOKIE_NAME` | `audit_token` | Auth cookie name |
+| `COOKIE_DOMAIN` | (unset) | Optional cookie domain — leave unset to scope the cookie to the exact host (works for localhost and the future `audit.<domain>` subdomain) |
+| `PUBLIC_BASE_URL` / `APP_BASE_URL` | (unset) | Public base URL (e.g. `https://audit.example.com`), reserved for absolute links such as password-reset emails |
 | `NODE_ENV` | `development` | Set `production` to enable `secure` cookies |
 
 The Audit app deliberately uses port **3102** (not the Blueprint app's 3001 or the QA Assistant's
