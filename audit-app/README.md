@@ -11,9 +11,10 @@ brand identity.
 This repository contains the Blueprint app (root) and the standalone product apps under their own
 directories (`qa-app/`, `audit-app/`). Each is built and deployed independently.
 
-> **Phase 1 status:** authentication + database schema + an auth-protected dashboard shell are
-> implemented. The audit engine (crawling/analysis), scoring, reports, and the anonymous
-> homepage-audit free tier are planned for later phases. No AI yet, no fake scaffolding.
+> **Phase 2 status:** the audit engine + API routes are ported from the monolith and wired to the
+> app's own database. `POST /api/audit/run` and `/run-html` are reachable **without auth** (anonymous
+> = free tier, 1-audit limit); authenticated users get their subscription tier, and reports +
+> dimensions/checks are persisted locally. No AI yet, no fake scaffolding.
 
 ## Tech stack
 
@@ -31,9 +32,10 @@ audit-app/
     db.ts              # sql.js init + normalized schema
     config.ts          # env-driven configuration
     rateLimit.ts       # in-memory login rate limiting
-    middleware/auth.ts # JWT cookie auth
-    routes/            # auth.ts
-    schemas/           # zod request schemas
+    engine/            # audit analyzers (cheerio-based, 7 dimensions)
+    middleware/        # auth.ts, abuseProtection.ts (rate limits, queue, blacklist)
+    routes/            # auth.ts, audit.ts (the 6 audit endpoints)
+    schemas/           # zod request schemas (auth.ts, audit.ts)
     types.ts           # shared server types
   src/                 # React frontend
     lib/               # api client, auth context, constants
@@ -86,7 +88,12 @@ All `/api/*` routes. Cookie-based auth (HTTP-only `audit_token`).
 - `POST /api/auth/request-password-reset` — generate reset token
 - `POST /api/auth/reset-password` — reset password with token
 
-(Audit endpoints — `/api/audit/*` — arrive with the Phase 2 engine.)
+- `POST /api/audit/run` — run a website audit (no auth required; anonymous = free tier)
+- `POST /api/audit/run-html` — run an audit from pasted HTML
+- `GET  /api/audit/reports` — list your reports (scoped to the user or `anonymous`)
+- `GET  /api/audit/reports/:id` — full report with dimensions + checks
+- `GET  /api/audit/reports/:id/status` — poll a running report
+- `GET  /api/audit/usage` — free-tier usage + remaining audits
 
 ## Security notes
 
@@ -99,9 +106,9 @@ All `/api/*` routes. Cookie-based auth (HTTP-only `audit_token`).
 ## Roadmap (planned phases)
 
 1. ✅ Authentication + database schema + dashboard shell
-2. Audit engine (crawl + analyze a live URL, dimension scoring)
-3. Anonymous homepage-audit free tier + full-audit reports
-4. Report export + history
+2. ✅ Audit engine (crawl + analyze a live URL, dimension scoring)
+3. ✅ Anonymous homepage-audit free tier + full-audit reports (free tier = homepage only, 1 audit)
+4. Report export + history (frontend report UI)
 5. AI-assisted explanations (clearly labeled)
 6. Security hardening + rate limiting + performance
 7. Full application testing

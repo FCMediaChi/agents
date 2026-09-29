@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { config } from './config.js';
 import { initDb, persistDb, closeDb } from './db.js';
 import authRoutes from './routes/auth.js';
+import auditRoutes from './routes/audit.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,10 +18,12 @@ async function main() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(cookieParser());
-  app.use(express.json({ limit: '1mb' }));
+  // Run-html accepts pasted HTML up to 5MB, so allow a larger JSON body.
+  app.use(express.json({ limit: '10mb' }));
 
   // API routes
   app.use('/api/auth', authRoutes);
+  app.use('/api/audit', auditRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -43,8 +46,12 @@ async function main() {
           { method: 'POST', path: '/api/auth/reset-password', body: '{ token, password }', description: 'Reset password' },
         ],
         audit: [
-          { method: 'POST', path: '/api/audit/run', description: 'Run a website audit (Phase 2 — not yet wired)' },
-          { method: 'GET', path: '/api/audit/reports', description: 'List audit reports (Phase 2 — not yet wired)' },
+          { method: 'POST', path: '/api/audit/run', body: '{ url }', description: 'Run a website audit (no auth required — free tier)' },
+          { method: 'POST', path: '/api/audit/run-html', body: '{ html, url }', description: 'Run an audit from pasted HTML' },
+          { method: 'GET', path: '/api/audit/reports', description: 'List your audit reports' },
+          { method: 'GET', path: '/api/audit/reports/:id', description: 'Get a full report with dimensions + checks' },
+          { method: 'GET', path: '/api/audit/reports/:id/status', description: 'Poll a running report status' },
+          { method: 'GET', path: '/api/audit/usage', description: 'Get free-tier usage + remaining audits' },
         ],
       },
     });
