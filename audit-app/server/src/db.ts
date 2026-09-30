@@ -97,12 +97,15 @@ function initializeSchema(): void {
       id TEXT PRIMARY KEY,
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
+      subscription_tier TEXT NOT NULL DEFAULT 'FREE',
       password_reset_token TEXT,
       password_reset_expires_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+  // Migration for DBs created before subscription_tier existed.
+  try { db.run('ALTER TABLE users ADD COLUMN subscription_tier TEXT NOT NULL DEFAULT \'FREE\''); } catch { /* already exists */ }
 
   // Audit tables (mirrored from the monolith's server/src/db.ts, self-contained)
   db.run(`
@@ -115,8 +118,7 @@ function initializeSchema(): void {
       summary TEXT,
       error TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id)
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
   db.run(`
@@ -149,8 +151,7 @@ function initializeSchema(): void {
     CREATE TABLE IF NOT EXISTS audit_usage (
       user_id TEXT PRIMARY KEY,
       audits_run INTEGER NOT NULL DEFAULT 0,
-      last_audit_at TEXT,
-      FOREIGN KEY (user_id) REFERENCES users(id)
+      last_audit_at TEXT
     )
   `);
 

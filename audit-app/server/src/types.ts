@@ -4,6 +4,7 @@ export interface User {
   id: string;
   email: string;
   password_hash: string;
+  subscription_tier: string;
   password_reset_token: string | null;
   password_reset_expires_at: string | null;
   created_at: string;
