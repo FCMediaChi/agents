@@ -22,7 +22,9 @@ const dimensions = [
 
 export default function LandingPage() {
   const { user } = useAuth();
-  const primaryCta = user ? '/dashboard' : '/signup';
+  // The free audit is anonymous-capable, so the primary CTA always routes to the
+  // run-audit tool page (no login required for the first audit).
+  const primaryCta = '/audit';
   return (
     <div className="min-h-screen bg-white text-slate-900">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
@@ -64,7 +66,7 @@ export default function LandingPage() {
             to={primaryCta}
             className="inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand/90"
           >
-            Start a website audit
+            Run a free audit
             <ArrowRight className="h-4 w-4" />
           </Link>
           <a
@@ -110,7 +112,7 @@ export default function LandingPage() {
             to={primaryCta}
             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white hover:bg-brand/90"
           >
-            Start a website audit
+            Run a free audit
           </Link>
         </div>
       </section>
