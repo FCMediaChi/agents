@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
+import { AUDIT_PLANS } from '../lib/pricing';
 
 interface AuditCheck {
   check_name: string;
@@ -252,6 +253,44 @@ export default function AuditPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section id="pricing" className="max-w-6xl mx-auto px-4 py-20">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-extrabold text-slate-900">Simple Pricing</h2>
+          <p className="text-slate-600 mt-2">Start with a free homepage audit, upgrade when you need more</p>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-5xl mx-auto">
+          {AUDIT_PLANS.map((plan) => (
+            <div key={plan.name} className={`rounded-2xl border-2 p-6 text-center flex flex-col ${plan.featured ? 'border-[#1A9EF2] bg-white shadow-lg shadow-[#1A9EF2]/10 relative' : 'border-slate-200 bg-white'}`}>
+              {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#1A9EF2] text-white text-xs font-bold rounded-full whitespace-nowrap">Most Popular</div>}
+              <h3 className="text-lg font-bold text-slate-900">{plan.name}</h3>
+              <div className="text-3xl font-extrabold text-slate-900 my-3">{plan.price}</div>
+              <p className="text-xs text-slate-500 mb-4">{plan.desc}</p>
+              <ul className="text-xs text-slate-600 space-y-2 mb-6 text-left flex-1">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />{f}</li>
+                ))}
+              </ul>
+              <a
+                href={plan.href}
+                target={plan.href.startsWith('http') ? '_blank' : undefined}
+                rel="noopener noreferrer"
+                onClick={plan.href === '#audit-form' ? () => setShowTool(true) : undefined}
+                className={`block w-full py-2.5 rounded-xl font-bold text-sm transition-all ${plan.featured ? 'bg-[#1A9EF2] hover:bg-[#4551D3] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
+              >
+                {plan.cta}
+              </a>
+              {plan.secondaryCta && (
+                <a href={plan.secondaryHref} target="_blank" rel="noopener noreferrer"
+                  className="block w-full mt-2 py-2 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all">
+                  {plan.secondaryCta}
+                </a>
+              )}
+            </div>
+          ))}
         </div>
       </section>
 
