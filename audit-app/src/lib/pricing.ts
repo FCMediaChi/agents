@@ -17,17 +17,17 @@ export interface Plan {
 }
 
 // Hosted Stripe payment links — what the monolith frontend actually uses for
-// checkout. The connected Stripe account is "express" (one-time payments only):
-// the $29 single link works today; Team/Agency monthly/yearly subscription links
-// cannot charge recurring until the owner switches to a full Stripe account. That
-// is an account-level constraint, not something the app code can resolve — the
-// links are wired for parity regardless.
+// checkout. The connected Stripe account is STANDARD (full, supports
+// subscriptions); links below were recreated 2026-10-01 after the owner's
+// Express→Standard switch reset the catalog (see
+// /home/team/shared/stripe-payment-links.md). Team/Agency monthly/yearly
+// links now charge recurring.
 const STRIPE = {
-  auditSingle: 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02',
-  auditTeamMonthly: 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03',
-  auditTeamYearly: 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05',
-  auditAgencyMonthly: 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04',
-  auditAgencyYearly: 'https://buy.stripe.com/eVq3cv1bDf1tfIO3sc7Re0c',
+  auditSingle: 'https://buy.stripe.com/00w9ATbPF6oD7oe3KE9Zm04',
+  auditTeamMonthly: 'https://buy.stripe.com/8x2aEX2f59AP7oe2GA9Zm05',
+  auditTeamYearly: 'https://buy.stripe.com/4gM4gz9Hx3creQG3KE9Zm06',
+  auditAgencyMonthly: 'https://buy.stripe.com/3cI00j3j914j4c25SM9Zm07',
+  auditAgencyYearly: 'https://buy.stripe.com/5kQdR97zp6oD5g66WQ9Zm08',
 };
 
 export const PRICING = {
