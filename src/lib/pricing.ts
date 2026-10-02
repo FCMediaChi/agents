@@ -29,17 +29,17 @@ export interface Plan {
 }
 
 const STRIPE = {
-  // Audit checkout links
-  auditSingle: 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02',
-  auditTeamMonthly: 'https://buy.stripe.com/6oU14n5Eo5RacaUda6fAc03',
-  auditTeamYearly: 'https://buy.stripe.com/28E7sLd6Q5Ra4Isc62fAc05',
-  auditAgencyMonthly: 'https://buy.stripe.com/fZu3cveaUa7q0scgmifAc04',
-  auditAgencyYearly: 'https://buy.stripe.com/eVq3cv1bDf1tfIO3sc7Re0c',
-  // Blueprint checkout links
-  blueprintSoloMonthly: 'https://buy.stripe.com/bJedR96Isa7qdeY4DAfAc07',
-  blueprintSoloYearly: 'https://buy.stripe.com/aFa4gzeaU6Ve2Ak4DAfAc08',
-  blueprintTeamMonthly: 'https://buy.stripe.com/fZu7sLaYIa7q3EofiefAc09',
-  blueprintTeamYearly: 'https://buy.stripe.com/28EdR99UE0wQdeY0nkfAc0a',
+  // Audit checkout links (recreated 2026-10-01 after Express→Standard switch)
+  auditSingle: 'https://buy.stripe.com/00w9ATbPF6oD7oe3KE9Zm04',
+  auditTeamMonthly: 'https://buy.stripe.com/8x2aEX2f59AP7oe2GA9Zm05',
+  auditTeamYearly: 'https://buy.stripe.com/4gM4gz9Hx3creQG3KE9Zm06',
+  auditAgencyMonthly: 'https://buy.stripe.com/3cI00j3j914j4c25SM9Zm07',
+  auditAgencyYearly: 'https://buy.stripe.com/5kQdR97zp6oD5g66WQ9Zm08',
+  // Blueprint checkout links (recreated 2026-10-01 after Express→Standard switch)
+  blueprintSoloMonthly: 'https://buy.stripe.com/bJefZh06XeV9dMC1Cw9Zm00',
+  blueprintSoloYearly: 'https://buy.stripe.com/28E00j6vl6oDbEucha9Zm01',
+  blueprintTeamMonthly: 'https://buy.stripe.com/eVq3cvdXN7sH5g6dle9Zm02',
+  blueprintTeamYearly: 'https://buy.stripe.com/3cIdR9f1R7sH4c20ys9Zm03',
 };
 
 export const SUPPORT_EMAIL = 'support@nuria.firstcreationmedia.com';

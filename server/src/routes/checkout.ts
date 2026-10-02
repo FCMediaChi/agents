@@ -143,7 +143,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
 
       // Fallback: Audit Single Use uses a hosted payment link
       if (product === 'audit' && tier === 'single' && interval === 'one-time') {
-        return res.json({ url: 'https://buy.stripe.com/6oU28r9UEenG8YIda6fAc02' });
+        return res.json({ url: 'https://buy.stripe.com/00w9ATbPF6oD7oe3KE9Zm04' });
       }
 
     if (!priceId) {
