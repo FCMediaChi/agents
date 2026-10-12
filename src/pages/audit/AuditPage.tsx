@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { AUDIT_PLANS } from '../../lib/pricing';
+import { AUDIT_PLANS, checkoutHref } from '../../lib/pricing';
+import { useAuth } from '../../lib/auth';
 import { useTitle } from '../../lib/useTitle';
 import { Globe, Search, AlertCircle, CheckCircle2, XCircle, Loader2, BarChart3, ExternalLink, ChevronDown } from 'lucide-react';
 
@@ -145,6 +146,7 @@ const PLANS = AUDIT_PLANS;
 
 export default function AuditPage() {
   useTitle('Nuria Website Audit | Nuria AI');
+  const { user } = useAuth();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -274,12 +276,12 @@ export default function AuditPage() {
                   <li key={f} className="flex items-center gap-2"><CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />{f}</li>
                 ))}
               </ul>
-              <a href={plan.href} target={plan.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
+              <a href={checkoutHref(plan.href, user?.id)} target={plan.href.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer"
                 className={`block w-full py-2.5 rounded-xl font-bold text-sm transition-all ${plan.featured ? 'bg-[#1A9EF2] hover:bg-[#4551D3] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}>
                 {plan.cta}
               </a>
               {(plan as any).secondaryCta && (
-                <a href={(plan as any).secondaryHref} target="_blank" rel="noopener noreferrer"
+                <a href={checkoutHref((plan as any).secondaryHref, user?.id)} target="_blank" rel="noopener noreferrer"
                   className="block w-full mt-2 py-2 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] border border-[#C3E8FF] hover:border-[#1A9EF2] transition-all">
                   {(plan as any).secondaryCta}
                 </a>

@@ -123,6 +123,13 @@ function initializeSchema(): void {
   try { db.run('ALTER TABLE users ADD COLUMN reset_token TEXT'); } catch { /* already exists */ }
   try { db.run('ALTER TABLE users ADD COLUMN reset_token_expiry TEXT'); } catch { /* already exists */ }
 
+  // Migration: Stripe identity for webhook-driven entitlement (grant/revoke).
+  // stripe_customer_id links a user to their Stripe customer; stripe_subscription_id
+  // links them to the active subscription so `customer.subscription.deleted` /
+  // `customer.subscription.updated` events can revoke access on cancellation.
+  try { db.run('ALTER TABLE users ADD COLUMN stripe_customer_id TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT'); } catch { /* already exists */ }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS projects (
       id TEXT PRIMARY KEY,
@@ -248,6 +255,9 @@ function initializeSchema(): void {
       FOREIGN KEY (user_id) REFERENCES users(id)
     )
   `);
+  // Migration: one-time paid audit credits (Audit "Single Use" $29). Each paid
+  // single grants exactly one full-audit credit, consumed by audit/routes/audit.ts.
+  try { db.run('ALTER TABLE audit_usage ADD COLUMN paid_audits INTEGER DEFAULT 0'); } catch { /* already exists */ }
 
   // Team membership
   db.run(`
@@ -462,6 +472,8 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code)',
     'CREATE INDEX IF NOT EXISTS idx_promo_redemptions_code ON promo_redemptions(code, product, tier, interval)',
+    'CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)',
+    'CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id)',
     ];
   for (const idx of indexes) {
     try { db.run(idx); } catch { /* may already exist */ }
