@@ -12,26 +12,39 @@ function uuid(): string {
   return crypto.randomUUID();
 }
 
-// Check if user can run an audit
-function checkAuditLimit(userId: string): { allowed: boolean; message?: string } {
+// Check if user can run an audit.
+// - Premium tiers (SOLO/TEAM/AGENCY) get unlimited FULL audits.
+// - Free tier gets 1 lifetime free (homepage-only) audit.
+// - A paid "Single Use" purchase grants exactly one extra FULL audit credit
+//   (audit_usage.paid_audits), consumed here when it unlocks an audit.
+function checkAuditLimit(userId: string): { allowed: boolean; message?: string; isFullAccess: boolean } {
   const db = getDb();
   const user = db.prepare('SELECT subscription_tier FROM users WHERE id = ?').get(userId) as any;
-  if (!user) return { allowed: false, message: 'User not found' };
+  if (!user) return { allowed: false, message: 'User not found', isFullAccess: false };
 
-  // Premium tiers get unlimited audits
-  if (user && user.subscription_tier !== 'FREE') {
-    return { allowed: true };
+  // Premium tiers get unlimited full audits
+  if (user.subscription_tier !== 'FREE') {
+    return { allowed: true, isFullAccess: true };
   }
 
-  // Free tier: check usage
-  const usage = db.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(userId) as any;
+  // Free tier: check usage + paid credits
+  const usage = db.prepare('SELECT audits_run, paid_audits FROM audit_usage WHERE user_id = ?').get(userId) as any;
   const count = usage?.audits_run || 0;
+  const paidCredits = usage?.paid_audits || 0;
 
-  if (count >= 1) {
-    return { allowed: false, message: 'Free tier limited to 1 audit. Upgrade to run more.' };
+  if (count >= 1 && paidCredits <= 0) {
+    return { allowed: false, message: 'Free tier limited to 1 audit. Upgrade to run more.', isFullAccess: false };
   }
 
-  return { allowed: true };
+  // If this audit is unlocked by a paid credit (free audit already used),
+  // consume the credit and run it with full (non-free) access.
+  if (count >= 1 && paidCredits > 0) {
+    db.prepare('UPDATE audit_usage SET paid_audits = paid_audits - 1 WHERE user_id = ?').run(userId);
+    return { allowed: true, isFullAccess: true };
+  }
+
+  // First free audit (homepage-only)
+  return { allowed: true, isFullAccess: false };
 }
 
 // POST /api/audit/run
@@ -52,7 +65,7 @@ router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLB
     }
 
     // Check audit limit (skip for unauthenticated free-tier users)
-    const limit = user ? checkAuditLimit(user.id) : { allowed: true };
+    const limit = user ? checkAuditLimit(user.id) : { allowed: true, isFullAccess: false };
     if (!limit.allowed) {
       return res.status(402).json({ error: limit.message });
     }
@@ -67,9 +80,12 @@ router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLB
       VALUES (?, ?, ?, 'running')
     `).run(reportId, user ? user.id : 'anonymous', targetUrl);
 
-    // Run audit asynchronously (don't await — respond immediately)
+    // Run audit asynchronously (don't await — respond immediately).
+    // A free-tier user who just consumed a paid "Single Use" credit still gets
+    // a FULL audit (non-free tier), not the homepage-only free audit.
     const userTier = user ? (user.subscription_tier || 'FREE') : 'FREE';
-    runAudit(targetUrl, { tier: userTier.toLowerCase() }).then(async (report) => {
+    const auditTier = limit.isFullAccess ? (userTier === 'FREE' ? 'single' : userTier.toLowerCase()) : 'free';
+    runAudit(targetUrl, { tier: auditTier }).then(async (report) => {
       const db2 = getDb();
 
       // Update report
@@ -151,7 +167,7 @@ router.post('/run-html', auditIPRateLimit, auditCooldown, singleAuditQueue, audi
     }
 
     // Check audit limit (skip for unauthenticated free-tier users)
-    const limit = user ? checkAuditLimit(user.id) : { allowed: true };
+    const limit = user ? checkAuditLimit(user.id) : { allowed: true, isFullAccess: false };
     if (!limit.allowed) {
       return res.status(402).json({ error: limit.message });
     }
@@ -168,7 +184,8 @@ router.post('/run-html', auditIPRateLimit, auditCooldown, singleAuditQueue, audi
 
     // Run audit asynchronously
     const userTier = user ? (user.subscription_tier || 'FREE') : 'FREE';
-    runAuditFromHtml(parsed.data.html, sourceUrl, userTier.toLowerCase()).then(async (report) => {
+    const auditTier = limit.isFullAccess ? (userTier === 'FREE' ? 'single' : userTier.toLowerCase()) : 'free';
+    runAuditFromHtml(parsed.data.html, sourceUrl, auditTier).then(async (report) => {
       const db2 = getDb();
 
       db2.prepare(`
@@ -368,15 +385,17 @@ router.get('/usage', (req: Request, res: Response) => {
     }
 
     const db = getDb();
-    const usage = db.prepare('SELECT audits_run, last_audit_at FROM audit_usage WHERE user_id = ?').get(user ? user.id : 'anonymous') as any;
+    const usage = db.prepare('SELECT audits_run, paid_audits, last_audit_at FROM audit_usage WHERE user_id = ?').get(user ? user.id : 'anonymous') as any;
     const userRec = user ? db.prepare('SELECT subscription_tier FROM users WHERE id = ?').get(user.id) as any : null;
 
     const auditsRun = usage?.audits_run || 0;
+    const paidAudits = usage?.paid_audits || 0;
     const isFree = userRec?.subscription_tier === 'FREE';
     const limit = isFree ? 1 : 999999;
 
     res.json({
       audits_run: auditsRun,
+      paid_audits: paidAudits,
       limit,
       remaining: Math.max(0, limit - auditsRun),
       is_free_tier: isFree,

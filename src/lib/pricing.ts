@@ -44,6 +44,23 @@ const STRIPE = {
 
 export const SUPPORT_EMAIL = 'support@nuria.firstcreationmedia.com';
 
+/**
+ * Build a checkout href for a plan CTA.
+ *
+ * When the user is authenticated, append `?client_reference_id=<userId>` to a
+ * hosted Stripe Payment Link so Stripe stamps the user id onto the Checkout
+ * Session. The webhook then reads `client_reference_id` to know WHO paid and
+ * derives the tier from the PRICE actually paid (server-side) — the tier is
+ * never placed in this URL (user-controllable). Anonymous visitors and
+ * non-Stripe hrefs (anchors, mailto:, internal paths) are returned unchanged.
+ */
+export function checkoutHref(href: string | undefined, userId?: string | null): string | undefined {
+  if (!href || !userId) return href;
+  if (!href.startsWith('https://buy.stripe.com/')) return href;
+  const sep = href.includes('?') ? '&' : '?';
+  return `${href}${sep}client_reference_id=${encodeURIComponent(userId)}`;
+}
+
 export const PRICING = {
   blueprint: {
     free: {

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './lib/auth'
 import { useTitle } from './lib/useTitle'
-import { BLUEPRINT_PLANS } from './lib/pricing'
+import { BLUEPRINT_PLANS, checkoutHref } from './lib/pricing'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
@@ -103,6 +103,7 @@ function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function LandingPage() {
   useTitle('Nuria Website Blueprint | Nuria AI');
+  const { user } = useAuth();
   // States for interactive components
   const [activeSegment, setActiveSegment] = useState<"planners" | "explorers">("planners")
   const [simulatorCategory, setSimulatorCategory] = useState<"ecommerce" | "localbusiness" | "saas">("ecommerce")
@@ -910,15 +911,15 @@ function LandingPage() {
                 </ul>
                 {plan.yearlyHref ? (
                   <>
-                    <a href={plan.href} target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
+                    <a href={checkoutHref(plan.href, user?.id)} target="_blank" rel="noopener noreferrer" className="block w-full py-2.5 rounded-xl font-bold text-sm bg-[#1A9EF2] hover:bg-[#4551D3] text-white text-center transition-all mb-1.5">
                       {plan.cta}
                     </a>
-                    <a href={plan.yearlyHref} target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
+                    <a href={checkoutHref(plan.yearlyHref, user?.id)} target="_blank" rel="noopener noreferrer" className="block w-full py-1.5 rounded-lg font-medium text-xs text-[#1A9EF2] hover:text-[#4551D3] text-center border border-[#C3E8FF] transition-all">
                       Pay Yearly ({plan.yearlyPrice})
                     </a>
                   </>
                 ) : (
-                  <a href={plan.href} className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
+                  <a href={checkoutHref(plan.href, user?.id)} className="block w-full py-2.5 rounded-xl font-bold text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 text-center transition-all">
                     {plan.cta}
                   </a>
                 )}

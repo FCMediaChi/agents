@@ -13,6 +13,8 @@ export interface User {
   reset_token_expiry: string | null;
   trial_started_at: string | null;
   trial_ends_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   created_at: string;
   updated_at: string;
 }
