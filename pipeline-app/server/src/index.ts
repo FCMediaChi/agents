@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { initDb, persistDb, closeDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import pipelineRoutes from './routes/pipeline.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,11 @@ async function main() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(cookieParser());
+
+  // Stripe webhook — must mount BEFORE express.json() so the route can read the
+  // raw body for signature verification.
+  app.use('/api/webhooks', webhookRoutes);
+
   app.use(express.json({ limit: '10mb' }));
 
   // API routes

@@ -91,6 +91,24 @@ export function getRawDb(): SqlJsDatabase {
   return db;
 }
 
+/** True if `table` already has a column named `column`. */
+function columnExists(table: string, column: string): boolean {
+  const res = db.exec(`PRAGMA table_info(${table})`);
+  if (!res.length) return false;
+  // PRAGMA table_info columns: cid, name, type, notnull, dflt_value, pk
+  return res[0].values.some((row) => row[1] === column);
+}
+
+/** Add the Stripe entitlement columns if they don't already exist. */
+function migrateUserStripeColumns(): void {
+  if (!columnExists('users', 'stripe_customer_id')) {
+    db.run('ALTER TABLE users ADD COLUMN stripe_customer_id TEXT');
+  }
+  if (!columnExists('users', 'stripe_subscription_id')) {
+    db.run('ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT');
+  }
+}
+
 function initializeSchema(): void {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -100,12 +118,19 @@ function initializeSchema(): void {
       subscription_tier TEXT NOT NULL DEFAULT 'FREE',
       trial_started_at TEXT,
       trial_ends_at TEXT,
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
       password_reset_token TEXT,
       password_reset_expires_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  // Idempotent migrations for databases created in earlier phases (before the
+  // Stripe entitlement columns existed). `CREATE TABLE IF NOT EXISTS` above will
+  // not touch an existing `users` table, so we add the columns when missing.
+  migrateUserStripeColumns();
 
   // Pipeline tables (mirrored from the monolith's server/src/db.ts, self-contained)
   db.run(`

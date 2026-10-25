@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { PIPELINE_PLANS } from '../../lib/pricing';
+import { useState, useEffect } from 'react';
+import { PIPELINE_PLANS, checkoutHref, type Plan } from '../../lib/pricing';
+import { pipelineApi } from '../../lib/pipelineApi';
 import { useTitle } from '../../lib/useTitle';
 import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
 
@@ -20,6 +21,18 @@ const HOW_IT_WORKS = [
 export default function PipelineLanding() {
   useTitle('Nuria Client Pipeline | Nuria AI');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // If a user is signed in (e.g. arriving from the "View Plans" upgrade screen),
+  // stamp their id onto the Stripe payment links so the webhook can attribute
+  // the purchase. Anonymous visitors get the bare links.
+  useEffect(() => {
+    let mounted = true;
+    pipelineApi.auth.me()
+      .then(({ user }) => { if (mounted) setUserId(user.id); })
+      .catch(() => { /* anonymous — leave userId null */ });
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="min-h-screen bg-white text-slate-800 font-sans">
@@ -140,7 +153,7 @@ export default function PipelineLanding() {
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Start with a 7-day free trial. Then choose a plan.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {PIPELINE_PLANS.map((plan: any, i) => (
+            {PIPELINE_PLANS.map((plan: Plan, i) => (
               <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
                 {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
                 <h3 className="text-lg font-bold text-slate-900 mb-2">{plan.name}</h3>
@@ -148,24 +161,25 @@ export default function PipelineLanding() {
                   <span className="text-3xl font-extrabold text-slate-900">{plan.price}</span>
                   <span className="text-slate-400 text-sm ml-1">{plan.period}</span>
                 </div>
-                {plan.yearly && (
+                {plan.yearly ? (
                   <p className="text-xs text-slate-400 mb-3">
                     or{' '}
-                    {plan.yearlyCta ? (
-                      <a href={plan.href} className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
-                        {plan.yearlyCta}
+                    {plan.yearlyHref ? (
+                      <a href={checkoutHref(plan.yearlyHref, userId)} className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
+                        {plan.yearly}
                       </a>
                     ) : (
                       <span className="text-slate-500">{plan.yearly}</span>
                     )}
-                    {!plan.yearlyCta && ' when billed annually'}
+                    {' '}when billed annually
                   </p>
+                ) : (
+                  <div className="mb-4"></div>
                 )}
-                {!plan.yearly && <div className="mb-4"></div>}
                 <ul className="space-y-2 mb-6 flex-1">
                   {plan.features.map((f: string, j: number) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
                 </ul>
-                <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]'}`}>{plan.cta}</a>
+                <a href={checkoutHref(plan.monthlyHref, userId)} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]'}`}>{plan.cta}</a>
                 {plan.contactEmail && (
                   <p className="mt-2 text-center text-xs text-slate-500 break-all">{plan.contactEmail}</p>
                 )}

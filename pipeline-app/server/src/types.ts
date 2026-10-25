@@ -7,6 +7,8 @@ export interface User {
   subscription_tier: string;
   trial_started_at: string | null;
   trial_ends_at: string | null;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   password_reset_token: string | null;
   password_reset_expires_at: string | null;
   created_at: string;
