@@ -10,11 +10,11 @@ routes, sharing only the Nuria brand identity.
 This repository contains the Blueprint app (root) and the standalone product apps under their own
 directories (`qa-app/`, `audit-app/`, `pipeline-app/`). Each is built and deployed independently.
 
-> **Phase 1 status:** standalone scaffold complete — own Express server, own SQLite schema
-> (`users` + trial columns + the 3 pipeline tables), auth (register/login/logout/me/password-reset)
-> with login rate limiting, a 7-day free-trial access middleware, and a landing + auth + empty
-> dashboard shell. The case-study/pitch engines and routes arrive in Phase 2; pricing/checkout in
-> Phase 4.
+> **Phase 2 status:** backend engines + routes complete — the deterministic case-study engine
+> (`caseStudyEngine.ts`) and pitch analyzer (`pitchAnalyzer.ts`) are ported, and the full 15-endpoint
+> pipeline API is live under `/api/pipeline` (agency onboarding, dashboard stats, case-study CRUD +
+> generate, pitch CRUD + analyze/delete), with a per-user scrape cooldown as general abuse protection.
+> The frontend feature pages arrive in Phase 3; pricing/checkout in Phase 4.
 
 ## Tech stack
 
@@ -32,8 +32,10 @@ pipeline-app/
     db.ts              # sql.js init + schema (users + trial columns + pipeline tables)
     config.ts          # env-driven configuration
     rateLimit.ts       # in-memory login rate limiting
-    middleware/        # auth.ts, trial.ts (7-day trial / paid access)
-    routes/            # auth.ts, pipeline.ts (GET /api/pipeline/me placeholder)
+    pitchAnalyzer.ts   # deterministic site teardown + cold-email template
+    caseStudyEngine.ts # deterministic scrape + narrative case-study template
+    middleware/        # auth.ts, trial.ts (7-day trial / paid access), abuseProtection.ts (scrape cooldown)
+    routes/            # auth.ts, pipeline.ts (15 pipeline endpoints)
     schemas/           # zod request schemas (auth.ts)
     types.ts           # shared server types
   src/                 # React frontend
@@ -88,7 +90,19 @@ All `/api/*` routes. Cookie-based auth (HTTP-only `pipeline_token`).
 - `POST /api/auth/request-password-reset` — generate reset token
 - `POST /api/auth/reset-password` — reset password with token
 
-- `GET  /api/pipeline/me` — subscription + trial status (requires active trial or paid tier; expired → `402 TRIAL_EXPIRED`)
+- `GET  /api/pipeline/me` — subscription + trial status (auth only, so an expired-trial user can still read their status)
+- `GET  /api/pipeline/agency` / `PUT /api/pipeline/agency` — get / update agency profile
+- `POST /api/pipeline/onboarding` — create agency profile
+- `GET  /api/pipeline/dashboard` — agency + case-study/pitch stats
+- `GET  /api/pipeline/case-studies` / `POST /api/pipeline/case-studies` — list / create case studies
+- `GET  /api/pipeline/case-studies/:id` / `PUT /api/pipeline/case-studies/:id` — get / update a case study
+- `POST /api/pipeline/case-studies/:id/generate` — scrape old site + generate narrative case study
+- `GET  /api/pipeline/pitches` / `POST /api/pipeline/pitches` — list / create pitches
+- `GET  /api/pipeline/pitches/:id` — get a pitch
+- `POST /api/pipeline/pitches/:id/analyze` — scrape prospect site + generate cold email
+- `DELETE /api/pipeline/pitches/:id` — delete a pitch
+
+All `/api/pipeline/*` routes except `/me` are gated by `requirePipelineAccess` (active trial or paid tier; expired → `402 TRIAL_EXPIRED`). The two scrape endpoints (`generate` / `analyze`) also enforce a 5-second per-user cooldown.
 
 ## Access model
 
@@ -106,7 +120,7 @@ All `/api/*` routes. Cookie-based auth (HTTP-only `pipeline_token`).
 ## Roadmap (planned phases)
 
 1. ✅ Authentication + database schema + trial middleware + dashboard shell
-2. Case-study + pitch engines (`caseStudyEngine.ts`, `pitchAnalyzer.ts`) and the 15 pipeline endpoints
+2. ✅ Case-study + pitch engines (`caseStudyEngine.ts`, `pitchAnalyzer.ts`) and the 15 pipeline endpoints
 3. Frontend pages (onboarding, case study, cold pitch)
 4. Pricing & Stripe checkout (Solo/Team/Agency) + trial-expiry gating
 5. Cutover & decommission (repoint `pipeline.` subdomain, remove monolith code)
