@@ -1,3 +1,5 @@
+import { BLUEPRINT_PLANS } from './pricing';
+
 export const APP_NAME = 'Nuria Website Blueprint';
 export const APP_TAGLINE = 'Turn a rough website idea into a deliverable-ready plan.';
 
@@ -5,52 +7,32 @@ export interface Tier {
   name: string;
   price: string;
   cadence?: string;
+  /** Annual price label, e.g. "$566" (shown as "or $566/year"). */
+  yearly?: string;
   description: string;
   features: string[];
   cta: { label: string; to: string };
   highlighted?: boolean;
 }
 
-/** Blueprint pricing — mirrors the business plan (Free / Solo / Team / Agency). */
-export const TIERS: Tier[] = [
-  {
-    name: 'Free',
-    price: '$0',
-    description: 'Try the planner on a single project, for as long as you like.',
-    features: ['1 project (lifetime)', 'Sitemap builder', 'Page outlines', 'Content questionnaires'],
-    cta: { label: 'Start free', to: '/signup' },
+/**
+ * Landing-page cards, derived from the single source of truth in `lib/pricing.ts`
+ * (Free / Solo $59 · $566/yr / Team $149 · $1,430/yr / Agency contact).
+ * Checkout wiring is Phase 4, so CTAs stay on the in-app signup for now.
+ */
+export const TIERS: Tier[] = BLUEPRINT_PLANS.map((plan) => ({
+  name: plan.name,
+  price: plan.price,
+  cadence: plan.period === '/ month' ? '/mo' : undefined,
+  yearly: plan.yearlyPrice,
+  description: plan.tagline ?? plan.desc ?? '',
+  features: plan.features.slice(0, 5),
+  cta: {
+    label: plan.name === 'Free' ? 'Start free' : plan.name === 'Agency' ? 'Talk to us' : `Choose ${plan.name}`,
+    to: '/signup',
   },
-  {
-    name: 'Solo',
-    price: '$59',
-    cadence: '/mo',
-    description: 'For freelance designers planning sites for clients.',
-    features: ['5 projects per month', 'Wireframes', 'Proposal export', 'Everything in Free'],
-    cta: { label: 'Choose Solo', to: '/signup' },
-    highlighted: true,
-  },
-  {
-    name: 'Team',
-    price: '$149',
-    cadence: '/mo',
-    description: 'For small agencies planning several client sites at once.',
-    features: [
-      '10 projects per month',
-      'Premium features',
-      'Custom branding',
-      'Advanced wireframes',
-      'PDF + HTML export',
-    ],
-    cta: { label: 'Choose Team', to: '/signup' },
-  },
-  {
-    name: 'Agency',
-    price: 'Contact us',
-    description: 'Unlimited projects with white-labeling for busy agencies.',
-    features: ['Unlimited projects', 'White-labeling', 'Custom domains', 'API access', 'Premium features'],
-    cta: { label: 'Talk to us', to: '/signup' },
-  },
-];
+  highlighted: plan.featured,
+}));
 
 /** The five deliverables a Blueprint project produces (used by the dashboard shell). */
 export const DELIVERABLES = [

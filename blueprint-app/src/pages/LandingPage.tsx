@@ -118,6 +118,9 @@ export default function LandingPage() {
                   {tier.price}
                   {tier.cadence && <span className="text-sm font-medium text-slate-500">{tier.cadence}</span>}
                 </p>
+                {tier.yearly && (
+                  <p className="text-xs font-medium text-slate-500">or {tier.yearly}/year</p>
+                )}
                 <p className="mt-2 text-sm text-slate-600">{tier.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
                   {tier.features.map((feature) => (
