@@ -91,6 +91,21 @@ export function getRawDb(): SqlJsDatabase {
   return db;
 }
 
+/** Column names of `table` (empty array when the table does not exist yet). */
+function tableColumns(table: string): string[] {
+  const res = db.exec(`PRAGMA table_info(${table})`);
+  if (!res.length) return [];
+  const nameIdx = res[0].columns.indexOf('name');
+  if (nameIdx === -1) return [];
+  return res[0].values.map((row) => String(row[nameIdx]));
+}
+
+/** Idempotent `ALTER TABLE ... ADD COLUMN` — a no-op when the column exists. */
+function addColumnIfMissing(table: string, column: string, definition: string): void {
+  if (tableColumns(table).includes(column)) return;
+  db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
 function initializeSchema(): void {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
@@ -102,10 +117,18 @@ function initializeSchema(): void {
       trial_ends_at TEXT,
       password_reset_token TEXT,
       password_reset_expires_at TEXT,
+      stripe_customer_id TEXT,
+      stripe_subscription_id TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  // Migrations for databases created before the Stripe columns existed.
+  // Both are idempotent: they check PRAGMA table_info first and only ALTER when
+  // the column is missing, so re-running initDb() on an existing file is a no-op.
+  addColumnIfMissing('users', 'stripe_customer_id', 'TEXT');
+  addColumnIfMissing('users', 'stripe_subscription_id', 'TEXT');
 
   // Pipeline tables (mirrored from the monolith's server/src/db.ts, self-contained)
   db.run(`

@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "start": "PORT=3104 NODE_ENV=production tsx server/src/index.ts",
+    "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -26,6 +27,7 @@
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.18.0",
     "sql.js": "^1.14.1",
+    "stripe": "^22.6.2",
     "tsx": "^4.19.2",
     "uuid": "^11.1.0",
     "zod": "^3.24.2"

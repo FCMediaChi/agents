@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { PIPELINE_PLANS } from '../../lib/pricing';
+import { PIPELINE_PLANS, checkoutHref } from '../../lib/pricing';
+import { useAuth } from '../../lib/auth';
 import { useTitle } from '../../lib/useTitle';
 import { FileText, Send, CheckCircle, ChevronDown, ChevronUp, Sparkles, Clock, Upload, Search, PenTool } from 'lucide-react';
 
@@ -19,6 +20,7 @@ const HOW_IT_WORKS = [
 
 export default function PipelineLanding() {
   useTitle('Nuria Client Pipeline | Nuria AI');
+  const { user } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -140,8 +142,17 @@ export default function PipelineLanding() {
             <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Start with a 7-day free trial. Then choose a plan.</h2>
           </div>
           <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {PIPELINE_PLANS.map((plan: any, i) => (
-              <div key={i} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
+            {PIPELINE_PLANS.map((plan) => {
+              // Signed-in visitors get a hosted Stripe Payment Link as the
+              // primary CTA (with their user id attached as
+              // client_reference_id); anonymous visitors keep the in-app
+              // free-trial registration. Agency stays "Contact for Pricing".
+              const subscribeHref = checkoutHref(plan.monthlyHref, user?.id);
+              const primaryHref = subscribeHref || plan.href;
+              const primaryIsExternal = primaryHref.startsWith('http');
+              const yearlyHref = checkoutHref(plan.yearlyHref, user?.id);
+              return (
+              <div key={plan.name} className={`relative p-6 rounded-2xl border-2 ${plan.featured ? 'border-[#1A9EF2] shadow-xl shadow-[#1A9EF2]/10' : 'border-slate-200'} bg-white flex flex-col`}>
                 {plan.featured && <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-0.5 rounded-full bg-[#1A9EF2] text-white text-xs font-semibold">Popular</div>}
                 <h3 className="text-lg font-bold text-slate-900 mb-2">{plan.name}</h3>
                 <div className="mb-1">
@@ -151,26 +162,37 @@ export default function PipelineLanding() {
                 {plan.yearly && (
                   <p className="text-xs text-slate-400 mb-3">
                     or{' '}
-                    {plan.yearlyCta ? (
-                      <a href={plan.href} className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
-                        {plan.yearlyCta}
+                    {yearlyHref ? (
+                      <a href={yearlyHref} target="_blank" rel="noopener noreferrer" className="text-[#1A9EF2] font-medium underline hover:text-[#4551D3] transition-colors">
+                        {plan.yearly}
                       </a>
                     ) : (
                       <span className="text-slate-500">{plan.yearly}</span>
-                    )}
-                    {!plan.yearlyCta && ' when billed annually'}
+                    )}{' '}
+                    when billed annually
                   </p>
                 )}
                 {!plan.yearly && <div className="mb-4"></div>}
                 <ul className="space-y-2 mb-6 flex-1">
-                  {plan.features.map((f: string, j: number) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
+                  {plan.features.map((f, j) => (<li key={j} className="flex items-start gap-2 text-sm text-slate-600"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0 mt-0.5" />{f}</li>))}
                 </ul>
-                <a href={plan.href} className={`block w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all ${plan.featured ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3] shadow-md' : plan.name === 'Free Trial' ? 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]' : 'bg-[#1A9EF2] text-white hover:bg-[#4551D3]'}`}>{plan.cta}</a>
+                <a
+                  href={primaryHref}
+                  target={primaryIsExternal ? '_blank' : undefined}
+                  rel={primaryIsExternal ? 'noopener noreferrer' : undefined}
+                  className="block w-full py-2.5 rounded-xl text-sm font-semibold text-center bg-[#1A9EF2] text-white hover:bg-[#4551D3] transition-all shadow-md"
+                >
+                  {subscribeHref ? 'Subscribe' : plan.cta}
+                </a>
+                {plan.tagline && (
+                  <p className="mt-2 text-center text-xs text-slate-500">{plan.tagline}</p>
+                )}
                 {plan.contactEmail && (
                   <p className="mt-2 text-center text-xs text-slate-500 break-all">{plan.contactEmail}</p>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
