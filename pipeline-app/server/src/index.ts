@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { initDb, persistDb, closeDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import pipelineRoutes from './routes/pipeline.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,11 @@ async function main() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(cookieParser());
+
+  // Stripe webhook — MUST be mounted before express.json(). It verifies the
+  // signature against the raw request body, so the body must not be parsed yet.
+  app.use('/api/webhooks', webhookRoutes);
+
   app.use(express.json({ limit: '10mb' }));
 
   // API routes
@@ -60,6 +66,14 @@ async function main() {
           { method: 'POST', path: '/api/pipeline/pitches', body: '{ prospect_name, prospect_url, service }', description: 'Create a pitch' },
           { method: 'POST', path: '/api/pipeline/pitches/:id/analyze', description: 'Scrape prospect site + generate cold email' },
           { method: 'DELETE', path: '/api/pipeline/pitches/:id', description: 'Delete a pitch' },
+        ],
+        webhooks: [
+          {
+            method: 'POST',
+            path: '/api/webhooks/stripe',
+            description:
+              'Stripe webhook: checkout.session.completed grants the tier implied by the price paid; customer.subscription.deleted / updated(canceled|unpaid) revokes to FREE. Signature verified with STRIPE_WEBHOOK_SECRET when set.',
+          },
         ],
       },
     });
