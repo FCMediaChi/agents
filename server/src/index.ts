@@ -16,7 +16,6 @@ import auditRoutes from '../../audit/routes/audit.js';
 import accountRoutes from './routes/account.js';
 import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
-import pipelineRoutes from './routes/pipeline.js';
 import checkoutRoutes from './routes/checkout.js';
 import inviteCodeRoutes from './routes/inviteCodes.js';
 import webhookRoutes from './routes/webhooks.js';
@@ -60,7 +59,6 @@ async function main() {
   app.use('/api/account', accountRoutes);
   app.use('/api/account', apiKeyRoutes);
   app.use('/api/account', domainRoutes);
-  app.use('/api/pipeline', pipelineRoutes);
   app.use('/api', checkoutRoutes);
   app.use('/api/invite-codes', inviteCodeRoutes);
 

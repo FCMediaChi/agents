@@ -10,13 +10,6 @@ import SitemapBuilderPage from './pages/SitemapBuilderPage'
 import AuditPage from './pages/audit/AuditPage'
 import AccountPage from './pages/AccountPage'
 import ClientPortalPage from './pages/ClientPortalPage'
-import PipelineLanding from './pages/pipeline/PipelineLanding'
-import PipelineLogin from './pages/pipeline/PipelineLogin'
-import PipelineRegister from './pages/pipeline/PipelineRegister'
-import PipelineOnboarding from './pages/pipeline/PipelineOnboarding'
-import PipelineDashboard from './pages/pipeline/PipelineDashboard'
-import PipelineCaseStudy from './pages/pipeline/PipelineCaseStudy'
-import ColdPitchBuilder from './pages/pipeline/ColdPitchBuilder'
 import SupportPage from './pages/SupportPage'
 import { 
   Compass, 
@@ -94,12 +87,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function PipelineProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
-  if (loading) return null;
-  if (!user) return <Navigate to="/pipeline/login" replace />;
-  return <>{children}</>;
-}
 
 function LandingPage() {
   useTitle('Nuria Website Blueprint | Nuria AI');
@@ -1003,15 +990,6 @@ export default function App() {
       <Route path="/app/projects/:projectId" element={<ProtectedRoute><SitemapBuilderPage /></ProtectedRoute>} />
       <Route path="/app/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
       <Route path="/project/:projectId/client" element={<ClientPortalPage />} />
-
-      {/* Pipeline routes */}
-      <Route path="/pipeline" element={<PipelineLanding />} />
-      <Route path="/pipeline/login" element={<PipelineLogin />} />
-      <Route path="/pipeline/register" element={<PipelineRegister />} />
-      <Route path="/pipeline/onboarding" element={<PipelineProtectedRoute><PipelineOnboarding /></PipelineProtectedRoute>} />
-      <Route path="/pipeline/dashboard" element={<PipelineProtectedRoute><PipelineDashboard /></PipelineProtectedRoute>} />
-      <Route path="/pipeline/case-study" element={<PipelineProtectedRoute><PipelineCaseStudy /></PipelineProtectedRoute>} />
-      <Route path="/pipeline/cold-pitch" element={<PipelineProtectedRoute><ColdPitchBuilder /></PipelineProtectedRoute>} />
 
       <Route path="*" element={<LandingPage />} />
     </Routes>

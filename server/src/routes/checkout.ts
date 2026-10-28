@@ -21,7 +21,7 @@ let priceCacheExpiresAt = 0;
  * Discover Stripe price IDs at runtime by listing prices + products,
  * then matching by product name keywords.
  *
- * Product names must contain a product-line keyword ("Blueprint" or "Pipeline"),
+ * Product names must contain a product-line keyword ("Blueprint" or "Audit"),
  * a tier keyword ("Solo" / "Team"), and an interval keyword ("Monthly" / "Yearly").
  *
  * Results are cached for 5 minutes to avoid hitting Stripe on every request.
@@ -45,7 +45,6 @@ async function discoverPrices(): Promise<Record<string, string>> {
   const intervalKeywords = ['Monthly', 'Yearly', 'One-Time', 'One-time', 'one-time'];
   const productLineKeywords = [
     { keyword: 'Blueprint', prefix: 'blueprint' },
-    { keyword: 'Pipeline', prefix: 'pipeline' },
     { keyword: 'Audit', prefix: 'audit' },
   ];
 
@@ -110,8 +109,8 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'tier and interval are required' });
     }
 
-    if (!['blueprint', 'pipeline', 'audit'].includes(product)) {
-      return res.status(400).json({ error: 'Invalid product. Must be "blueprint", "pipeline", or "audit".' });
+    if (!['blueprint', 'audit'].includes(product)) {
+      return res.status(400).json({ error: 'Invalid product. Must be "blueprint" or "audit".' });
     }
 
     const validTiers = product === 'audit' ? ['single', 'team', 'agency'] : ['solo', 'team'];

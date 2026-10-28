@@ -11,8 +11,6 @@ export interface User {
   verification_token: string | null;
   reset_token: string | null;
   reset_token_expiry: string | null;
-  trial_started_at: string | null;
-  trial_ends_at: string | null;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   created_at: string;
@@ -91,44 +89,4 @@ export interface JwtPayload {
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
-}
-
-// Pipeline types
-export interface PipelineAgency {
-  id: string;
-  user_id: string;
-  agency_name: string;
-  website: string | null;
-  niche: string | null;
-  team_size: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PipelineCaseStudy {
-  id: string;
-  user_id: string;
-  agency_id: string | null;
-  client_name: string;
-  industry: string | null;
-  challenge: string | null;
-  solution: string | null;
-  results: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PipelinePitch {
-  id: string;
-  user_id: string;
-  agency_id: string | null;
-  prospect_name: string;
-  company_name: string | null;
-  industry: string | null;
-  pain_points: string | null;
-  proposed_solution: string | null;
-  status: string;
-  created_at: string;
-  updated_at: string;
 }
