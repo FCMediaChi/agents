@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Users, Palette, Plus, Trash2, Save, Loader2, Check, Key, Copy, Globe, Shield } from 'lucide-react';
+import { useAuth } from '../lib/auth';
+import { BLUEPRINT_PLANS, checkoutHref } from '../lib/pricing';
+
+/** Paid plans offered as one-click upgrades (Free is the starting point, not an upgrade). */
+const UPGRADE_PLANS = BLUEPRINT_PLANS.filter((plan) => plan.name !== 'Free');
 
 interface TeamMember {
   id: string;
@@ -19,6 +24,8 @@ interface WhitelabelSettings {
 }
 
 export default function AccountPage() {
+  const { user } = useAuth();
+  const currentTier = user?.subscription_tier ?? 'FREE';
   const [activeTab, setActiveTab] = useState<'team' | 'whitelabel' | 'blueprintwl' | 'apikeys' | 'domains'>('team');
 
   // Team state
@@ -210,8 +217,79 @@ export default function AccountPage() {
       <div className="max-w-3xl mx-auto px-4 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-extrabold text-slate-900">Account Settings</h1>
-          <p className="text-slate-500 mt-1">Manage your team and branding</p>
+          <p className="text-slate-500 mt-1">Manage your plan, team and branding</p>
         </div>
+
+        {/* Plan &amp; billing — upgrade CTAs carry client_reference_id so the
+            Stripe webhook knows which account to unlock. */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Plan &amp; billing</h2>
+              <p className="mt-1 text-sm text-slate-500">
+                You are on the <span className="font-semibold text-slate-900">{currentTier}</span> plan.
+                Upgrades are handled by Stripe and unlock as soon as payment completes.
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            {UPGRADE_PLANS.map((plan) => {
+              const monthly = plan.href?.startsWith('https://buy.stripe.com/')
+                ? checkoutHref(plan.href, user?.id)
+                : undefined;
+              const yearly = plan.yearlyHref ? checkoutHref(plan.yearlyHref, user?.id) : undefined;
+              const contact = plan.href?.startsWith('mailto:') ? plan.href : undefined;
+              const isCurrent = plan.name.toUpperCase() === currentTier;
+              return (
+                <div
+                  key={plan.name}
+                  className={`rounded-xl border p-4 ${plan.featured ? 'border-[#1A9EF2] bg-[#C3E8FF]/30' : 'border-slate-200'}`}
+                >
+                  <p className="text-sm font-bold text-slate-900">
+                    {plan.name}
+                    {isCurrent && <span className="ml-2 text-[10px] font-semibold uppercase text-[#4551D3]">current</span>}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    {plan.price}
+                    {plan.period}
+                  </p>
+                  {monthly && !isCurrent && (
+                    <a
+                      href={monthly}
+                      className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-[#1A9EF2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#1A9EF2]/90"
+                    >
+                      {plan.name} monthly
+                    </a>
+                  )}
+                  {yearly && (
+                    <a
+                      href={yearly}
+                      className="mt-2 inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                    >
+                      {plan.yearlyPrice}/year
+                    </a>
+                  )}
+                  {contact && (
+                    <>
+                      <a
+                        href={contact}
+                        className="mt-3 inline-flex w-full items-center justify-center rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                      >
+                        {plan.cta}
+                      </a>
+                      <p className="mt-2 text-center text-[11px] text-slate-500">{plan.contactEmail}</p>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <p className="mt-4 text-[11px] text-slate-400">
+            Subscriptions renew automatically until cancelled. Account and invoice details appear in the
+            Stripe receipt email sent after each payment.
+          </p>
+        </div>
+
 
         {/* Tabs */}
         <div className="flex gap-1 mb-8 bg-white rounded-xl border border-slate-200 p-1.5">

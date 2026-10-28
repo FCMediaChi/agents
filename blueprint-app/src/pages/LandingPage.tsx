@@ -10,9 +10,27 @@ import {
   Check,
 } from 'lucide-react';
 import { useAuth } from '../lib/auth';
-import { APP_NAME, DELIVERABLES, TIERS } from '../lib/constants';
+import { APP_NAME, DELIVERABLES, TIERS, type Tier } from '../lib/constants';
+import { checkoutHref } from '../lib/pricing';
 
 const deliverableIcons = [Network, FileText, MessageSquareText, SquareDashedMousePointer, FileCheck2];
+
+/**
+ * Resolve a pricing card's CTA destination.
+ *
+ *  - Free      → dashboard when signed in, /signup otherwise.
+ *  - Agency    → mailto: (no self-serve checkout).
+ *  - Stripe    → the hosted Payment Link with `?client_reference_id=<userId>`
+ *                appended for a signed-in user; anonymous visitors go to
+ *                /signup so the account (and its id) exists before paying.
+ */
+function planCta(tier: Tier, userId?: string | null): { href: string; external: boolean } {
+  if (tier.isFree) return { href: userId ? '/dashboard' : '/signup', external: false };
+  if (tier.href?.startsWith('mailto:')) return { href: tier.href, external: true };
+  if (!userId) return { href: '/signup', external: false };
+  const resolved = checkoutHref(tier.href, userId);
+  return resolved ? { href: resolved, external: true } : { href: '/signup', external: false };
+}
 
 export default function LandingPage() {
   const { user } = useAuth();
@@ -106,7 +124,10 @@ export default function LandingPage() {
             Start free. Upgrade when you're planning for clients.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {TIERS.map((tier) => (
+            {TIERS.map((tier) => {
+              const cta = planCta(tier, user?.id);
+              const yearlyHref = tier.yearlyHref ? checkoutHref(tier.yearlyHref, user?.id) : undefined;
+              return (
               <div
                 key={tier.name}
                 className={`flex flex-col rounded-2xl border p-6 ${
@@ -119,7 +140,16 @@ export default function LandingPage() {
                   {tier.cadence && <span className="text-sm font-medium text-slate-500">{tier.cadence}</span>}
                 </p>
                 {tier.yearly && (
-                  <p className="text-xs font-medium text-slate-500">or {tier.yearly}/year</p>
+                  <p className="text-xs font-medium text-slate-500">
+                    or{' '}
+                    {yearlyHref ? (
+                      <a href={yearlyHref} className="underline hover:text-brand-secondary">
+                        {tier.yearly}/year
+                      </a>
+                    ) : (
+                      <>{tier.yearly}/year</>
+                    )}
+                  </p>
                 )}
                 <p className="mt-2 text-sm text-slate-600">{tier.description}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-slate-600">
@@ -130,18 +160,35 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  to={tier.cta.to}
-                  className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold ${
-                    tier.highlighted
-                      ? 'bg-brand text-white hover:bg-brand/90'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
-                  }`}
-                >
-                  {tier.cta.label}
-                </Link>
+                {cta.external ? (
+                  <a
+                    href={cta.href}
+                    className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold ${
+                      tier.highlighted
+                        ? 'bg-brand text-white hover:bg-brand/90'
+                        : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tier.cta.label}
+                  </a>
+                ) : (
+                  <Link
+                    to={cta.href}
+                    className={`mt-6 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold ${
+                      tier.highlighted
+                        ? 'bg-brand text-white hover:bg-brand/90'
+                        : 'border border-slate-200 text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    {tier.cta.label}
+                  </Link>
+                )}
+                {tier.contactEmail && (
+                  <p className="mt-2 text-center text-[11px] text-slate-500">{tier.contactEmail}</p>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>

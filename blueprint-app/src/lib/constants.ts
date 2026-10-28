@@ -13,12 +13,28 @@ export interface Tier {
   features: string[];
   cta: { label: string; to: string };
   highlighted?: boolean;
+  /**
+   * Hosted Stripe Payment Link for this tier (or a mailto: for Agency).
+   * Resolved through `checkoutHref(href, user.id)` at render time so a signed-in
+   * user's id travels to Stripe as `client_reference_id`; anonymous visitors are
+   * sent to /signup instead (the CTA falls back to `cta.to`).
+   */
+  href?: string;
+  /** Annual hosted Stripe Payment Link, if this tier has one. */
+  yearlyHref?: string;
+  /** Visible contact address shown under an "Agency" mailto CTA. */
+  contactEmail?: string;
+  /** Free plan — no checkout at all. */
+  isFree?: boolean;
 }
 
 /**
  * Landing-page cards, derived from the single source of truth in `lib/pricing.ts`
  * (Free / Solo $59 · $566/yr / Team $149 · $1,430/yr / Agency contact).
- * Checkout wiring is Phase 4, so CTAs stay on the in-app signup for now.
+ *
+ * Phase 4: `href`/`yearlyHref` carry the real hosted Stripe links. Components
+ * pass them through `checkoutHref(href, user?.id)` so a signed-in user checks out
+ * with their id attached and an anonymous visitor is routed to /signup.
  */
 export const TIERS: Tier[] = BLUEPRINT_PLANS.map((plan) => ({
   name: plan.name,
@@ -32,6 +48,10 @@ export const TIERS: Tier[] = BLUEPRINT_PLANS.map((plan) => ({
     to: '/signup',
   },
   highlighted: plan.featured,
+  href: plan.href,
+  yearlyHref: plan.yearlyHref,
+  contactEmail: plan.contactEmail,
+  isFree: plan.name === 'Free',
 }));
 
 /** The five deliverables a Blueprint project produces (used by the dashboard shell). */

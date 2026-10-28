@@ -173,3 +173,53 @@ export async function sendPasswordResetEmail(
 
   return sendEmail({ to, subject, text, html });
 }
+
+/**
+ * Client-portal invitation.
+ *
+ * Sent to a planner's CLIENT — someone who has no Blueprint account. The link
+ * carries the project-scoped portal token, so it opens read-only without a
+ * login (see routes/clientPortal.ts and the /project/:id/client page).
+ */
+export async function sendProjectInviteEmail(params: {
+  to: string;
+  projectTitle: string;
+  portalLink: string;
+  role: string;
+  invitedByEmail?: string;
+}): Promise<EmailResult> {
+  const { to, projectTitle, portalLink, role, invitedByEmail } = params;
+  const subject = `You've been invited to review “${projectTitle}”`;
+  const roleLine = role === 'client'
+    ? 'You can view the plan and answer the content questions for each page.'
+    : 'You can view and comment on the plan.';
+  const text = [
+    invitedByEmail
+      ? `${invitedByEmail} has invited you to review the website plan “${projectTitle}” on Nuria Website Blueprint.`
+      : `You have been invited to review the website plan “${projectTitle}” on Nuria Website Blueprint.`,
+    '',
+    roleLine,
+    '',
+    'Open the plan here (no account needed):',
+    '',
+    portalLink,
+    '',
+    'If you were not expecting this email, you can safely ignore it.',
+    '',
+    '— The Nuria AI Team',
+  ].join('\n');
+
+  const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#0f172a;line-height:1.55">
+      <h2 style="margin:0 0 12px;color:#4551D3">Review “${projectTitle}”</h2>
+      <p>${invitedByEmail ? `<strong>${invitedByEmail}</strong> has invited you` : 'You have been invited'} to review this website plan on <strong>Nuria Website Blueprint</strong>.</p>
+      <p>${roleLine}</p>
+      <p style="margin:24px 0">
+        <a href="${portalLink}" style="background:#1A9EF2;color:#ffffff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:600">Open the plan</a>
+      </p>
+      <p style="font-size:13px;color:#64748b">No account is needed. If the button does not work, paste this link into your browser:<br />${portalLink}</p>
+      <p style="font-size:13px;color:#64748b">If you were not expecting this email, you can safely ignore it.</p>
+    </div>`;
+
+  return sendEmail({ to, subject, text, html });
+}

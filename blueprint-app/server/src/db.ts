@@ -320,8 +320,6 @@ const MIGRATIONS: Migration[] = [
       'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
       'CREATE INDEX IF NOT EXISTS idx_users_verification_token ON users(verification_token)',
       'CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token)',
-      'CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)',
-      'CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id)',
       'CREATE INDEX IF NOT EXISTS idx_projects_user_id ON projects(user_id)',
       'CREATE INDEX IF NOT EXISTS idx_pages_project_id ON pages(project_id)',
       'CREATE INDEX IF NOT EXISTS idx_pages_parent_id ON pages(parent_id)',
@@ -338,6 +336,29 @@ const MIGRATIONS: Migration[] = [
     ],
   },
 ];
+
+/**
+ * Add a column if the table does not already have it.
+ *
+ * Used for the Phase 4 Stripe columns, which are part of migration 001 for a
+ * brand-new database but must also be added to a database created by an earlier
+ * build (and to any table restored from a monolith dump) without losing data.
+ * SQLite has no `ADD COLUMN IF NOT EXISTS`, so the guard is a PRAGMA read; the
+ * call is idempotent by construction.
+ */
+function addColumnIfMissing(table: string, column: string, type: string): void {
+  const stmt = db.prepare(`PRAGMA table_info(${table})`);
+  const columns: string[] = [];
+  while (stmt.step()) {
+    const row = stmt.getAsObject() as { name?: unknown };
+    if (typeof row.name === 'string') columns.push(row.name);
+  }
+  stmt.free();
+  if (!columns.includes(column)) {
+    db.run(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+    console.log(`[Nuria Website Blueprint] Added column ${table}.${column} (${type})`);
+  }
+}
 
 function applyMigrations(): void {
   db.run(`
@@ -362,6 +383,16 @@ function applyMigrations(): void {
     db.run('INSERT INTO schema_migrations (id) VALUES (?)', [migration.id]);
     console.log(`[Nuria Website Blueprint] Applied migration ${migration.id}`);
   }
+
+  // Phase 4 — Stripe entitlement columns. Part of migration 001 for a fresh
+  // database; added here as well so an existing/legacy `users` table gains them
+  // without a data migration. Idempotent: re-running initDb() is a no-op.
+  addColumnIfMissing('users', 'stripe_customer_id', 'TEXT');
+  addColumnIfMissing('users', 'stripe_subscription_id', 'TEXT');
+  // Indexes last: they reference the columns above, which an upgraded legacy
+  // database only just gained.
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)');
+  db.run('CREATE INDEX IF NOT EXISTS idx_users_stripe_subscription_id ON users(stripe_subscription_id)');
 }
 
 /** Names of the tables this app owns (used by /api/health and the boot log). */
