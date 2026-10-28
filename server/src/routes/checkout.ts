@@ -181,12 +181,7 @@ router.post('/create-checkout-session', async (req: Request, res: Response) => {
       interval,
     };
 
-    // Subscription-specific fields
-    if (mode === 'subscription') {
-      sessionParams.subscription_data = {
-        trial_period_days: 7,
-      };
-    }
+    // Subscriptions charge immediately (no trial period) — owner decision 2026-10-28.
 
     try {
       const session = await getStripe().checkout.sessions.create(sessionParams);
