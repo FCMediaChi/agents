@@ -53,8 +53,43 @@ export interface Page {
   updated_at: string;
 }
 
+export interface Questionnaire {
+  id: string;
+  page_id: string;
+  questions: string;
+  answers: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Wireframe {
+  id: string;
+  page_id: string;
+  blocks: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Proposal {
+  id: string;
+  project_id: string;
+  client_name: string;
+  executive_summary: string | null;
+  pricing_estimate: string | null;
+  timeline_weeks: number;
+  terms_conditions: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface JwtPayload {
   userId: string;
+  /**
+   * Alias of `userId`. The account/team/white-label routes were written against
+   * `req.user.id`, so `authenticate` populates both spellings.
+   */
+  id?: string;
   email: string;
   subscriptionTier?: string;
 }
