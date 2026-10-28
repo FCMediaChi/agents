@@ -7,6 +7,15 @@ import { fileURLToPath } from 'url';
 import { config, isEmailConfigured } from './config.js';
 import { initDb, persistDb, closeDb, getTableNames } from './db.js';
 import authRoutes from './routes/auth.js';
+import projectRoutes from './routes/projects.js';
+import pageRoutes from './routes/pages.js';
+import questionnaireRoutes from './routes/questionnaires.js';
+import wireframeRoutes from './routes/wireframes.js';
+import proposalRoutes from './routes/proposals.js';
+import accountRoutes from './routes/account.js';
+import apiKeyRoutes from './routes/apiKeys.js';
+import domainRoutes from './routes/domains.js';
+import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,8 +31,26 @@ async function main() {
   app.use(cookieParser());
   app.use(express.json({ limit: '2mb' }));
 
-  // API routes
+  // Agency API-key auth + per-key rate limiting. Mounted globally, exactly like
+  // the monolith: a request carrying `x-api-key` (or `?api_key=`) resolves to a
+  // user here and then passes through `authenticate` without a session cookie.
+  app.use(apiKeyAuth);
+  app.use(apiRateLimit);
+
+  // API routes. Mount paths mirror the monolith so the Blueprint frontend
+  // (ported in Phase 3) can keep its existing fetch URLs:
+  //   projects.ts + pages.ts + proposals.ts  -> /api/projects/*
+  //   questionnaires.ts + wireframes.ts      -> /api/pages/*
+  //   account.ts + apiKeys.ts + domains.ts   -> /api/account/*
   app.use('/api/auth', authRoutes);
+  app.use('/api/projects', projectRoutes);
+  app.use('/api/projects', pageRoutes);
+  app.use('/api/pages', questionnaireRoutes);
+  app.use('/api/pages', wireframeRoutes);
+  app.use('/api/projects', proposalRoutes);
+  app.use('/api/account', accountRoutes);
+  app.use('/api/account', apiKeyRoutes);
+  app.use('/api/account', domainRoutes);
 
   // Health check
   app.get('/api/health', (_req, res) => {
@@ -32,7 +59,7 @@ async function main() {
       app: APP_NAME,
       name: APP_LABEL,
       version: '0.1.0',
-      phase: 'phase-1-scaffold',
+      phase: 'phase-2-routes',
       database: path.basename(config.dbPath),
       tables: getTableNames().length,
       email: { provider: 'resend', configured: isEmailConfigured() },
@@ -59,6 +86,46 @@ async function main() {
           { method: 'POST', path: '/api/auth/forgot-password', body: '{ email }', description: 'Send a password-reset link' },
           { method: 'POST', path: '/api/auth/reset-password', body: '{ token, newPassword }', description: 'Reset the password with a token' },
         ],
+        projects: [
+          { method: 'GET', path: '/api/projects', description: 'List your planning projects' },
+          { method: 'POST', path: '/api/projects', body: '{ title, description? }', description: 'Create a project (FREE tier: 1 lifetime, then 403 Limit Reached)' },
+          { method: 'GET', path: '/api/projects/:id', description: 'Get one project' },
+          { method: 'PUT', path: '/api/projects/:id', body: '{ title?, description?, branding_*? }', description: 'Update a project' },
+          { method: 'DELETE', path: '/api/projects/:id', description: 'Delete a project' },
+          { method: 'GET', path: '/api/projects/:id/pages', description: 'List the sitemap pages of a project' },
+          { method: 'POST', path: '/api/projects/:id/pages', body: '{ title, parent_id?, page_type?, sort_order? }', description: 'Add a page (auto-creates its questionnaire + wireframe from the plan templates)' },
+          { method: 'PUT', path: '/api/projects/:id/pages/:pageId', body: '{ title?, parent_id?, sort_order?, page_type? }', description: 'Update a page' },
+          { method: 'PUT', path: '/api/projects/:id/pages/:pageId/outline', body: '{ description?, goals?, notes? }', description: 'Update the page outline' },
+          { method: 'DELETE', path: '/api/projects/:id/pages/:pageId', description: 'Delete a page' },
+          { method: 'GET', path: '/api/projects/:id/members', description: 'List project collaborators' },
+          { method: 'POST', path: '/api/projects/:id/invite', body: '{ email, role? }', description: 'Invite a collaborator (editor | client)' },
+          { method: 'GET', path: '/api/projects/:id/client-view?token=…', description: 'Client-portal read-only view' },
+        ],
+        content: [
+          { method: 'GET', path: '/api/pages/:pageId/questionnaire', description: 'Get a page questionnaire (default questions generated with the page)' },
+          { method: 'PUT', path: '/api/pages/:pageId/questionnaire', body: '{ answers }', description: 'Save questionnaire answers' },
+          { method: 'GET', path: '/api/pages/:pageId/wireframe', description: 'Get a page wireframe (default blocks generated with the page)' },
+          { method: 'PUT', path: '/api/pages/:pageId/wireframe', body: '{ blocks }', description: 'Save wireframe blocks (max 100)' },
+          { method: 'POST', path: '/api/pages/:pageId/wireframe/export-html', description: 'Export the wireframe as HTML' },
+          { method: 'GET', path: '/api/projects/:projectId/proposal', description: 'Get the project proposal (empty draft if none yet)' },
+          { method: 'PUT', path: '/api/projects/:projectId/proposal', body: '{ client_name?, executive_summary?, pricing_estimate?, timeline_weeks?, terms_conditions?, status? }', description: 'Create or update the proposal' },
+          { method: 'POST', path: '/api/projects/:projectId/proposal/export-doc', description: 'Export the proposal as a document' },
+        ],
+        account: [
+          { method: 'GET', path: '/api/account/team', description: 'List team members (Team tier: 5 seats)' },
+          { method: 'GET', path: '/api/account/whitelabel', description: 'Get white-label settings (Agency)' },
+          { method: 'PUT', path: '/api/account/whitelabel', body: '{ enabled, companyName, logoUrl, primaryColor, secondaryColor }', description: 'Update white-label settings (Agency)' },
+          { method: 'GET', path: '/api/account/blueprint-whitelabel', description: 'Get Blueprint white-label settings (Agency)' },
+          { method: 'PUT', path: '/api/account/blueprint-whitelabel', body: '{ enabled, companyName, logoUrl, primaryColor, secondaryColor }', description: 'Update Blueprint white-label settings (Agency)' },
+          { method: 'GET', path: '/api/account/api-keys', description: 'List API keys (Agency)' },
+          { method: 'POST', path: '/api/account/api-keys', body: '{ name? }', description: 'Create an API key (Agency, max 5)' },
+          { method: 'DELETE', path: '/api/account/api-keys/:id', description: 'Revoke an API key' },
+          { method: 'GET', path: '/api/account/domains', description: 'List custom domains (Agency)' },
+          { method: 'POST', path: '/api/account/domains', body: '{ domain }', description: 'Add a custom domain (Agency)' },
+          { method: 'POST', path: '/api/account/domains/:id/verify', description: 'Verify a custom domain' },
+          { method: 'DELETE', path: '/api/account/domains/:id', description: 'Remove a custom domain' },
+        ],
+        apiKeyAuth: 'Send x-api-key: nuria_… (or ?api_key=) instead of the session cookie on any /api route.',
       },
     });
   });
