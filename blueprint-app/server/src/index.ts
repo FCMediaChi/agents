@@ -15,6 +15,8 @@ import proposalRoutes from './routes/proposals.js';
 import accountRoutes from './routes/account.js';
 import apiKeyRoutes from './routes/apiKeys.js';
 import domainRoutes from './routes/domains.js';
+import clientPortalRoutes from './routes/clientPortal.js';
+import webhookRoutes from './routes/webhooks.js';
 import { apiKeyAuth, apiRateLimit } from './middleware/apiKeyAuth.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +31,13 @@ async function main() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(cookieParser());
+
+  // Stripe webhook. MUST be mounted BEFORE express.json(): the handler needs the
+  // RAW request body to verify the `stripe-signature` header. If the JSON parser
+  // ran first the body would already be an object and every signature check
+  // would fail ("No signatures found matching the expected signature").
+  app.use('/api/webhooks', webhookRoutes);
+
   app.use(express.json({ limit: '2mb' }));
 
   // Agency API-key auth + per-key rate limiting. Mounted globally, exactly like
@@ -43,6 +52,10 @@ async function main() {
   //   questionnaires.ts + wireframes.ts      -> /api/pages/*
   //   account.ts + apiKeys.ts + domains.ts   -> /api/account/*
   app.use('/api/auth', authRoutes);
+  // Client portal FIRST: GET /api/projects/:id/client-view is opened by a client
+  // with no session, so it must not pass through the authenticated project
+  // router (which applies `authenticate` to everything mounted below it).
+  app.use('/api/projects', clientPortalRoutes);
   app.use('/api/projects', projectRoutes);
   app.use('/api/projects', pageRoutes);
   app.use('/api/pages', questionnaireRoutes);
@@ -59,7 +72,7 @@ async function main() {
       app: APP_NAME,
       name: APP_LABEL,
       version: '0.1.0',
-      phase: 'phase-2-routes',
+      phase: 'phase-4-pricing',
       database: path.basename(config.dbPath),
       tables: getTableNames().length,
       email: { provider: 'resend', configured: isEmailConfigured() },
@@ -75,6 +88,9 @@ async function main() {
       auth: `Cookie-based session (HTTP-only ${config.cookieName}, set on login)`,
       requiresEmailVerification: config.requireEmailVerification,
       endpoints: {
+        webhooks: [
+          { method: 'POST', path: '/api/webhooks/stripe', headers: 'stripe-signature', description: 'Stripe webhook: grants the tier implied by the price paid (checkout.session.completed), revokes on cancellation. Verified with STRIPE_WEBHOOK_SECRET.' },
+        ],
         auth: [
           { method: 'POST', path: '/api/auth/register', body: '{ email, password }', description: 'Create an account and send the verification email' },
           { method: 'POST', path: '/api/auth/verify', body: '{ token }', description: 'Verify an email address' },

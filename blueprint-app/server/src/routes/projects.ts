@@ -6,6 +6,14 @@ import type { AuthenticatedRequest, Project } from '../types.js';
 import { authenticate } from '../middleware/auth.js';
 import { checkProjectLimit, requirePaidTier, incrementProjectCount } from '../middleware/projectLimit.js';
 import { projectCreateCooldown } from '../middleware/limits.js';
+import { buildAppLink, sendProjectInviteEmail, type EmailResult } from '../emailService.js';
+
+/** Absolute origin of the current request, used to build emailed links. */
+function requestOrigin(req: Request): string {
+  const proto = (req.headers['x-forwarded-proto'] as string | undefined)?.split(',')[0].trim() || req.protocol;
+  const host = (req.headers['x-forwarded-host'] as string | undefined) || req.get('host');
+  return host ? `${proto}://${host}` : '';
+}
 
 const router = Router();
 
@@ -175,12 +183,12 @@ router.get('/:id/members', (req: AuthenticatedRequest, res: Response): void => {
 });
 
 // POST /api/projects/:id/invite — invite a collaborator
-router.post('/:id/invite', (req: AuthenticatedRequest, res: Response): void => {
+router.post('/:id/invite', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { email, role } = req.body;
   if (!email) { res.status(400).json({ error: 'Email is required' }); return; }
 
   const db = getDb();
-  const project = db.prepare('SELECT user_id FROM projects WHERE id = ?').get(req.params.id) as any;
+  const project = db.prepare('SELECT user_id, title FROM projects WHERE id = ?').get(req.params.id) as any;
   if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
   if (project.user_id !== req.user!.userId) { res.status(403).json({ error: 'Only the project owner can invite members' }); return; }
 
@@ -194,7 +202,36 @@ router.post('/:id/invite', (req: AuthenticatedRequest, res: Response): void => {
   const token = crypto.randomBytes(16).toString('hex');
   db.prepare('INSERT INTO project_members (id, project_id, email, role, access_token, status) VALUES (?, ?, ?, ?, ?, ?)').run(id, req.params.id, email.toLowerCase().trim(), memberRole, token, 'invited');
 
-  res.status(201).json({ id, email: email.toLowerCase().trim(), role: memberRole, status: 'invited', accessToken: token });
+  // Email the portal link. The recipient is a CLIENT of the planner, so the link
+  // carries the project-scoped access token and opens without an account (see
+  // routes/clientPortal.ts). Delivery never blocks the invite from being
+  // recorded: a Resend failure is logged and reported, not thrown.
+  const portalLink = buildAppLink(
+    `/project/${encodeURIComponent(String(req.params.id))}/client?token=${encodeURIComponent(token)}`,
+    requestOrigin(req),
+  );
+  let emailResult: EmailResult = { delivered: false, transport: 'log' };
+  try {
+    emailResult = await sendProjectInviteEmail({
+      to: email.toLowerCase().trim(),
+      projectTitle: project.title || 'your website plan',
+      portalLink,
+      role: memberRole,
+      invitedByEmail: req.user!.email,
+    });
+  } catch (err: any) {
+    console.error('[Blueprint] Failed to send project invite email:', err?.message ?? err);
+  }
+
+  res.status(201).json({
+    id,
+    email: email.toLowerCase().trim(),
+    role: memberRole,
+    status: 'invited',
+    accessToken: token,
+    portalLink,
+    emailDelivery: { transport: emailResult.transport, delivered: emailResult.delivered },
+  });
 });
 
 // DELETE /api/projects/:id/members/:memberId
@@ -208,37 +245,8 @@ router.delete('/:id/members/:memberId', (req: AuthenticatedRequest, res: Respons
   res.json({ success: true });
 });
 
-// GET /api/projects/:id/client-view?token=xxx — client portal access
-router.get('/:id/client-view', (req: Request, res: Response): void => {
-  const db = getDb();
-  const token = req.query.token as string;
-  if (!token) { res.status(401).json({ error: 'Access token required' }); return; }
-
-  const member = db.prepare('SELECT * FROM project_members WHERE project_id = ? AND access_token = ?').get(req.params.id, token) as any;
-  if (!member) { res.status(403).json({ error: 'Invalid access token' }); return; }
-
-  const project = db.prepare('SELECT id, title, description, branding_primary_color, branding_secondary_color FROM projects WHERE id = ?').get(req.params.id) as any;
-  if (!project) { res.status(404).json({ error: 'Project not found' }); return; }
-
-  const pages = db.prepare('SELECT * FROM pages WHERE project_id = ? ORDER BY sort_order').all(req.params.id) as any[];
-  const isClient = member.role === 'client';
-
-  // For each page, get questionnaires
-  const pagesWithData = pages.map((p: any) => {
-    const q = db.prepare('SELECT questions, answers FROM questionnaires WHERE page_id = ?').get(p.id) as any;
-    return {
-      ...p,
-      questionnaire: q ? { questions: JSON.parse(q.questions || '[]'), answers: q.answers ? JSON.parse(q.answers) : {} } : null,
-    };
-  });
-
-  res.json({
-    project: { id: project.id, title: project.title, description: project.description,
-      branding_primary_color: project.branding_primary_color, branding_secondary_color: project.branding_secondary_color },
-    member: { role: member.role, email: member.email },
-    isClient,
-    pages: pagesWithData,
-  });
-});
+// NOTE: GET /api/projects/:id/client-view lives in routes/clientPortal.ts and is
+// mounted BEFORE this router in index.ts — a client opening an emailed link has
+// no session cookie, so it must not pass through `authenticate`.
 
 export default router;
