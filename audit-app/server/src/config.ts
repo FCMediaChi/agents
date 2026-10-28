@@ -26,6 +26,12 @@ export const config = {
   publicBaseUrl: process.env.PUBLIC_BASE_URL || process.env.APP_BASE_URL || '',
   // How long a password-reset token remains valid.
   passwordResetTtlMs: 60 * 60 * 1000, // 1 hour
+  // Stripe webhook signing secret (whsec_...). Only used by
+  // POST /api/webhooks/stripe to verify the `stripe-signature` header with the
+  // static `Stripe.webhooks.constructEvent` helper — this app never holds a
+  // Stripe API key. Empty in dev/test: the route then parses the raw body
+  // without verifying (never do that in production).
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
 };
 
 export const isProd = config.nodeEnv === 'production';

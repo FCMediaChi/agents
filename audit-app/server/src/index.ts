@@ -8,6 +8,7 @@ import { config } from './config.js';
 import { initDb, persistDb, closeDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import auditRoutes from './routes/audit.js';
+import webhookRoutes from './routes/webhooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,6 +19,11 @@ async function main() {
   app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cors({ origin: config.corsOrigin, credentials: true }));
   app.use(cookieParser());
+
+  // Stripe webhook — MUST be mounted before express.json(). It verifies the
+  // signature against the raw request body, so the body must not be parsed yet.
+  app.use('/api/webhooks', webhookRoutes);
+
   // Run-html accepts pasted HTML up to 5MB, so allow a larger JSON body.
   app.use(express.json({ limit: '10mb' }));
 
@@ -51,7 +57,15 @@ async function main() {
           { method: 'GET', path: '/api/audit/reports', description: 'List your audit reports' },
           { method: 'GET', path: '/api/audit/reports/:id', description: 'Get a full report with dimensions + checks' },
           { method: 'GET', path: '/api/audit/reports/:id/status', description: 'Poll a running report status' },
-          { method: 'GET', path: '/api/audit/usage', description: 'Get free-tier usage + remaining audits' },
+          { method: 'GET', path: '/api/audit/usage', description: 'Get free-tier usage + remaining audits (incl. paid Single Use credits)' },
+        ],
+        webhooks: [
+          {
+            method: 'POST',
+            path: '/api/webhooks/stripe',
+            description:
+              'Stripe webhook: checkout.session.completed grants the tier implied by the recurring price paid (or 1 full-audit credit for the one-time Single Use price); customer.subscription.deleted / updated(canceled|unpaid) revokes to FREE. Signature verified with STRIPE_WEBHOOK_SECRET when set.',
+          },
         ],
       },
     });

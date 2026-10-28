@@ -106,6 +106,10 @@ function initializeSchema(): void {
   `);
   // Migration for DBs created before subscription_tier existed.
   try { db.run('ALTER TABLE users ADD COLUMN subscription_tier TEXT NOT NULL DEFAULT \'FREE\''); } catch { /* already exists */ }
+  // Stripe entitlement bookkeeping (Phase 4 webhook). Written only by
+  // POST /api/webhooks/stripe — see server/src/routes/webhooks.ts.
+  try { db.run('ALTER TABLE users ADD COLUMN stripe_customer_id TEXT'); } catch { /* already exists */ }
+  try { db.run('ALTER TABLE users ADD COLUMN stripe_subscription_id TEXT'); } catch { /* already exists */ }
 
   // Audit tables (mirrored from the monolith's server/src/db.ts, self-contained)
   db.run(`
@@ -152,6 +156,22 @@ function initializeSchema(): void {
       user_id TEXT PRIMARY KEY,
       audits_run INTEGER NOT NULL DEFAULT 0,
       last_audit_at TEXT
+    )
+  `);
+  // One-time "Single Use" ($29) audit credits, granted by the Stripe webhook and
+  // consumed one-per-run in routes/audit.ts. Deliberately a credit count rather
+  // than a tier: it never elevates the account permanently.
+  try { db.run('ALTER TABLE audit_usage ADD COLUMN paid_audits INTEGER NOT NULL DEFAULT 0'); } catch { /* already exists */ }
+
+  // Idempotency ledger for Stripe webhook deliveries. Tier writes are naturally
+  // idempotent, but credit grants are not: a redelivered
+  // checkout.session.completed must not hand out a second paid audit.
+  db.run(`
+    CREATE TABLE IF NOT EXISTS stripe_webhook_events (
+      event_id TEXT PRIMARY KEY,
+      type TEXT NOT NULL,
+      action TEXT NOT NULL,
+      processed_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
 
