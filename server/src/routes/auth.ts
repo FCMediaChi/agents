@@ -70,12 +70,9 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
   const id = crypto.randomUUID();
   const passwordHash = bcrypt.hashSync(password, 10);
   const verificationToken = crypto.randomUUID();
-  const now = new Date().toISOString();
-  const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-
   db.prepare(
-    'INSERT INTO users (id, email, password_hash, subscription_tier, verified, verification_token, trial_started_at, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, email, passwordHash, 'FREE', 0, verificationToken, now, trialEnds);
+    'INSERT INTO users (id, email, password_hash, subscription_tier, verified, verification_token) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, email, passwordHash, 'FREE', 0, verificationToken);
 
   // Send verification email (fire-and-forget)
   const verifyLink = `https://nuriaai.ctonew.app/verify?token=${verificationToken}`;
@@ -91,8 +88,6 @@ router.post('/register', (req: AuthenticatedRequest, res: Response): void => {
     email,
     subscription_tier: 'FREE',
     verified: false,
-    trial_started_at: now,
-    trial_ends_at: trialEnds,
     message: 'Account created. Please check your email to verify your account.',
   });
 });
@@ -330,7 +325,7 @@ router.post('/logout', (_req: AuthenticatedRequest, res: Response): void => {
 // ============================================================================
 router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void => {
   const db = getDb();
-  const user = db.prepare('SELECT id, email, subscription_tier, created_at FROM users WHERE id = ?').get(req.user!.userId) as Omit<User, 'password_hash' | 'updated_at' | 'verified' | 'verification_token' | 'reset_token' | 'reset_token_expiry' | 'trial_started_at' | 'trial_ends_at'> | undefined;
+  const user = db.prepare('SELECT id, email, subscription_tier, created_at FROM users WHERE id = ?').get(req.user!.userId) as Omit<User, 'password_hash' | 'updated_at' | 'verified' | 'verification_token' | 'reset_token' | 'reset_token_expiry'> | undefined;
 
   if (!user) {
     res.status(404).json({ error: 'User not found' });

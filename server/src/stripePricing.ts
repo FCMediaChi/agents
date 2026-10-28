@@ -9,7 +9,8 @@
 //
 // Price IDs are the `default_price` values from the Standard Stripe account's
 // recreated catalog (see /home/team/shared/stripe-payment-links.md, 2026-10-01).
-// All 13 prices are covered: 12 recurring subscription prices + 1 one-time
+// Blueprint and Audit only (Pipeline prices were removed when Pipeline moved to
+// its own standalone app): 8 recurring subscription prices + 1 one-time
 // "Audit Single Use" (handled specially — see AUDIT_SINGLE_PRICE_ID).
 
 export type EntitledTier = 'SOLO' | 'TEAM' | 'AGENCY';
@@ -21,12 +22,6 @@ export const PRICE_TO_TIER: Record<string, EntitledTier> = {
   // Blueprint — Team
   'price_1UMFmGDHbZkO7vsG4raaQeAb': 'TEAM', // Team Monthly
   'price_1UMFmIDHbZkO7vsGoNN5rw7Q': 'TEAM', // Team Yearly
-  // Pipeline — Solo
-  'price_1UMFmHDHbZkO7vsGLYd7xr1g': 'SOLO', // Solo Monthly
-  'price_1UMFmHDHbZkO7vsGcNy4UDba': 'SOLO', // Solo Yearly
-  // Pipeline — Team
-  'price_1UMFmHDHbZkO7vsG7QXxGfGj': 'TEAM', // Team Monthly
-  'price_1UMFmIDHbZkO7vsGeUWSMXxO': 'TEAM', // Team Yearly
   // Audit — Team
   'price_1UMFmHDHbZkO7vsGpaVQn8ya': 'TEAM', // Team Monthly
   'price_1UMFmHDHbZkO7vsGXU6dF8gO': 'TEAM', // Team Yearly

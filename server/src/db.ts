@@ -107,15 +107,10 @@ function initializeSchema(): void {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       subscription_tier TEXT NOT NULL DEFAULT 'FREE',
-      trial_started_at TEXT,
-      trial_ends_at TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
-  // Add trial columns if users table existed before this migration
-  try { db.run('ALTER TABLE users ADD COLUMN trial_started_at TEXT'); } catch { /* already exists */ }
-  try { db.run('ALTER TABLE users ADD COLUMN trial_ends_at TEXT'); } catch { /* already exists */ }
 
   // Migration: add email verification & password reset columns
   try { db.run('ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0'); } catch { /* already exists */ }
@@ -371,64 +366,6 @@ function initializeSchema(): void {
     )
   `);
 
-  // Pipeline tables
-  db.run(`
-    CREATE TABLE IF NOT EXISTS pipeline_agencies (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL UNIQUE,
-      agency_name TEXT NOT NULL,
-      website_url TEXT,
-      services TEXT,
-      industries TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS pipeline_case_studies (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      client_name TEXT NOT NULL,
-      client_url TEXT,
-      old_site_url TEXT,
-      screenshots TEXT,
-      traffic_data TEXT,
-      revenue_data TEXT,
-      generated_content TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  db.run(`
-    CREATE TABLE IF NOT EXISTS pipeline_pitches (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      prospect_name TEXT NOT NULL,
-      prospect_url TEXT,
-      audit_results TEXT,
-      cold_email TEXT,
-      status TEXT NOT NULL DEFAULT 'draft',
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-    )
-  `);
-
-  // Migration: add columns if tables already existed
-  try { db.run('ALTER TABLE pipeline_agencies ADD COLUMN services TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_agencies ADD COLUMN industries TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_agencies RENAME COLUMN website TO website_url'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN client_url TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN old_site_url TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN screenshots TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN traffic_data TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN revenue_data TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_case_studies ADD COLUMN generated_content TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN prospect_url TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN audit_results TEXT'); } catch { /* ok */ }
-  try { db.run('ALTER TABLE pipeline_pitches ADD COLUMN cold_email TEXT'); } catch { /* ok */ }
 
   // Invite codes — for manual tier onboarding without Stripe
   db.run(`
@@ -467,9 +404,6 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_audit_checks_dimension_id ON audit_checks(dimension_id)',
     'CREATE INDEX IF NOT EXISTS idx_team_members_account_id ON team_members(account_id)',
     'CREATE INDEX IF NOT EXISTS idx_team_members_email ON team_members(email)',
-    'CREATE INDEX IF NOT EXISTS idx_pipeline_agencies_user_id ON pipeline_agencies(user_id)',
-    'CREATE INDEX IF NOT EXISTS idx_pipeline_case_studies_user_id ON pipeline_case_studies(user_id)',
-    'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code)',
     'CREATE INDEX IF NOT EXISTS idx_promo_redemptions_code ON promo_redemptions(code, product, tier, interval)',
     'CREATE INDEX IF NOT EXISTS idx_users_stripe_customer_id ON users(stripe_customer_id)',

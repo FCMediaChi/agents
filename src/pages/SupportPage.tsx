@@ -6,7 +6,6 @@ import {
   HelpCircle,
   Layout,
   Search,
-  Target,
   TrendingUp,
   Mail,
   MessageSquare,
@@ -75,39 +74,11 @@ const APP_GUIDES = [
       'The single-use ($29) option is great for one-off client audits without a subscription commitment.',
     ],
   },
-  {
-    id: 'pipeline',
-    name: 'Nuria Client Pipeline',
-    icon: <Target className="w-6 h-6" />,
-    color: '#6DC7FF',
-    description: 'Outbound sales and prospecting toolkit with AI-powered case study generation and cold pitch email builder.',
-    gettingStarted: [
-      { step: 1, title: 'Set up your agency profile', body: 'After registering, complete the onboarding flow — add your agency name, website, services, and target industries.' },
-      { step: 2, title: 'Generate a case study', body: 'Upload before/after screenshots of a client project plus traffic and revenue data. The AI generates a narrative case study with problem-solution-results structure and key metrics.' },
-      { step: 3, title: 'Build a cold pitch', body: 'Enter a prospect\'s website URL. The tool runs a quick teardown analysis and generates a personalized cold email script highlighting specific issues and how you can fix them.' },
-      { step: 4, title: 'Track your outreach', body: 'Manage your pitches from the dashboard — track status, copy email scripts, and log meetings booked.' },
-    ],
-    keyFeatures: [
-      'AI-generated narrative case studies from screenshots + data',
-      'Prospect website teardown with specific improvement recommendations',
-      'Personalized cold email scripts (subject, body, signature)',
-      'Agency profile with service and industry targeting',
-      'Dashboard with stats: case studies, pitches, meetings booked',
-      'Free 7-day trial on all subscription tiers',
-    ],
-    tips: [
-      'Use real client data for case studies — specific before/after metrics are far more compelling than general claims.',
-      'Customize the AI-generated cold email before sending — add a personal detail about the prospect\'s business.',
-      'Target the "Cold Pitch Builder" at websites that clearly need your specific services — relevance beats volume.',
-      'Save your best-performing cold email scripts as templates for future use.',
-    ],
-  },
 ];
-
 const FAQS = [
   {
     q: 'Can I use multiple Nuria apps together?',
-    a: 'Yes, they are designed to work as a suite. For example: audit a prospect\'s site with Nuria Website Audit, use Nuria Website Blueprint to plan their new site, and send a personalized pitch through Nuria Client Pipeline.',
+    a: 'Yes, they are designed to work as a suite. For example: audit a prospect\'s site with Nuria Website Audit, then use Nuria Website Blueprint to plan their new site.',
   },
   {
     q: 'Do I need separate accounts for each app?',

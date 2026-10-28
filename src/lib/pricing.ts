@@ -1,12 +1,14 @@
 // src/lib/pricing.ts
-// Single source of truth for ALL product pricing across Nuria AI's three tools.
+// Single source of truth for pricing across the products that live in this app.
 // Edit a price here once and it updates everywhere — no more hardcoded values in
 // individual components that get lost on branch switches or rebuilds.
 //
 // Values mirror the ratified business plan:
 //   Blueprint:  Free $0 · Solo $59/mo ($566/yr) · Team $149/mo ($1,430/yr) · Agency "Contact for pricing"
 //   Audit:      Free $0 · Single $29 · Team $49/mo ($470/yr) · Agency $79/mo ($755/yr)
-//   Pipeline:   Solo $79/mo ($758/yr) · Team $199/mo ($1,910/yr) · Agency "Contact for Pricing" (7-day trial built into Solo/Team)
+//
+// (Nuria Client Pipeline is now a standalone app with its own pricing — its
+//  plans no longer live here.)
 
 export interface Plan {
   name: string;
@@ -19,7 +21,6 @@ export interface Plan {
   // UI extras
   tagline?: string;
   desc?: string;
-  yearly?: string; // Pipeline annual summary, e.g. "$758/yr"
   yearlyCta?: string; // optional linked label for the annual summary
   yearlyPrice?: string; // Blueprint annual checkout label, e.g. "$566"
   yearlyHref?: string; // Blueprint annual checkout URL
@@ -155,43 +156,7 @@ export const PRICING = {
       secondaryHref: STRIPE.auditAgencyYearly,
     },
   },
-  pipeline: {
-    solo: {
-      name: 'Solo',
-      price: '$79',
-      period: '/mo',
-      yearly: '$758/yr',
-      tagline: '7-day free trial included',
-      features: ['Case study generator', 'Cold pitch builder', '10 case studies/month', '20 pitches/month', 'Email support'],
-      cta: 'Get Started',
-      href: '/pipeline/register',
-      featured: false,
-    },
-    team: {
-      name: 'Team',
-      price: '$199',
-      period: '/mo',
-      yearly: '$1,910/yr',
-      tagline: '7-day free trial included',
-      features: ['Everything in Solo', 'Unlimited case studies', 'Unlimited pitches', 'Team collaboration', 'Priority support'],
-      cta: 'Get Started',
-      href: '/pipeline/register',
-      featured: true,
-    },
-    agency: {
-      name: 'Agency',
-      price: 'Contact for Pricing',
-      period: '',
-      features: ['Everything in Team', 'White-labeling', 'API access', 'Custom pricing', 'Dedicated support'],
-      cta: 'Contact Us',
-      href: 'mailto:sales@nuria.firstcreationmedia.com',
-      contactEmail: 'sales@nuria.firstcreationmedia.com',
-      featured: false,
-    },
-  },
 };
-
-// Ordered arrays for components that map over plans in a fixed order.
 export const BLUEPRINT_PLANS: Plan[] = [
   PRICING.blueprint.free,
   PRICING.blueprint.solo,
@@ -203,9 +168,4 @@ export const AUDIT_PLANS: Plan[] = [
   PRICING.audit.single,
   PRICING.audit.team,
   PRICING.audit.agency,
-];
-export const PIPELINE_PLANS: Plan[] = [
-  PRICING.pipeline.solo,
-  PRICING.pipeline.team,
-  PRICING.pipeline.agency,
 ];
