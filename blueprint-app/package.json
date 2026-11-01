@@ -9,7 +9,7 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:server\"",
     "build": "tsc -b && vite build",
     "build:server": "tsc -p server/tsconfig.json",
-    "start": "PORT=3106 NODE_ENV=production tsx server/src/index.ts",
+    "start": "NODE_ENV=production tsx server/src/index.ts",
     "preview": "vite preview",
     "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts",
     "test:pricing": "tsx server/src/tests/checkoutHref.test.ts"

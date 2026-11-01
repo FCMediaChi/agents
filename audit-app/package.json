@@ -10,7 +10,7 @@
     "build": "tsc -b && vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts",
-    "start": "PORT=3102 NODE_ENV=production tsx server/src/index.ts",
+    "start": "NODE_ENV=production tsx server/src/index.ts",
     "preview": "vite preview"
   },
   "dependencies": {

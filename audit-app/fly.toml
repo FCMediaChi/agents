@@ -1,0 +1,57 @@
+# Nuria Website Audit — Fly.io app configuration
+#
+# Deploy from the repo root:
+#   flyctl deploy --config audit-app/fly.toml --dockerfile audit-app/Dockerfile .
+#
+# Secrets are NOT stored here. Set them once per app with `flyctl secrets set`
+# (see deploy/fly/README.md). Only non-secret configuration lives in [env].
+
+app = "nuria-audit"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  # Fly does not inject PORT; the app reads $PORT (server/src/config.ts) and
+  # must match http_service.internal_port below.
+  PORT = "8080"
+  # SQLite file on the mounted volume. Never point this at the image layer.
+  AUDIT_DB_PATH = "/data/audit.sqlite"
+  # The app serves its own SPA, so CORS only matters for cross-origin callers.
+  CORS_ORIGIN = "https://audit.nuriaapps.com"
+  # Used for absolute links in emails (password reset).
+  PUBLIC_BASE_URL = "https://audit.nuriaapps.com"
+  APP_BASE_URL = "https://audit.nuriaapps.com"
+
+# Single volume holding the SQLite database. Created with:
+#   flyctl volumes create audit_data --region iad --size 1
+[[mounts]]
+  source = "audit_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  # sql.js keeps the database in memory and flushes to /data every 10s and on
+  # SIGTERM. "suspend" preserves memory across scale-to-zero, so no writes are
+  # lost; "stop" would rely on the SIGTERM flush alone.
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    grace_period = "25s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/api/health"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1
+
+# IMPORTANT: keep this app at exactly ONE machine. The database is a single
+# SQLite file on one volume; a second machine would fork the data.

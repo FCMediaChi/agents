@@ -1,0 +1,23 @@
+# Keep the build context small and free of host-local state.
+node_modules
+dist
+.git
+.gitignore
+*.log
+npm-debug.log*
+
+# Never ship a developer's SQLite file or the server data dir into the image.
+server/data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Local env files (secrets are injected by Fly, never baked into the image).
+.env
+.env.*
+
+# Deployment metadata is not part of the app payload.
+Dockerfile
+.dockerignore
+fly.toml
+README.md
