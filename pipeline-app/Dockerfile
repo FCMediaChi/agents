@@ -17,12 +17,12 @@
 # NATIVE MODULES: the database layer is `sql.js` (SQLite compiled to WebAssembly),
 # not `better-sqlite3`, so there is no native addon to compile and the image needs
 # no python3/make/g++ toolchain. If a native module is ever added to package.json,
-# add `apt-get update && apt-get install -y --no-install-recommends python3 make g++`
+# add `apk add --no-cache python3 make g++`
 # to the builder stage before `npm ci` (and to the runner stage too if the module
 # is loaded at runtime).
 
 # ---------- Stage 1: install all deps and build the frontend ----------
-FROM node:22-bookworm-slim AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 ENV NPM_CONFIG_FUND=false \
@@ -31,7 +31,7 @@ ENV NPM_CONFIG_FUND=false \
 
 # Copy manifests first so the dependency layer is cached independently of source.
 COPY package.json package-lock.json ./
-RUN npm ci --include=dev
+RUN npm ci --include=dev && npm cache clean --force
 
 # Everything else (node_modules/, dist/, *.sqlite are excluded via .dockerignore).
 COPY . .
@@ -40,7 +40,7 @@ COPY . .
 RUN npm run build
 
 # ---------- Stage 2: runtime ----------
-FROM node:22-bookworm-slim AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production \
