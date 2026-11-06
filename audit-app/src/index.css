@@ -1,4 +1,7 @@
 @import "tailwindcss";
+/* Nuria AI house style: Poppins Bold headings, DM Sans body. Shared,
+   byte-identical file in every Nuria app — see NURIA-BRAND-STYLE.md. */
+@import "./styles/nuria-fonts.css";
 
 @theme {
   --color-brand: #1a9ef2;
@@ -6,6 +9,9 @@
   --color-brand-accent: #6dc7ff;
   --color-brand-light: #c3e8ff;
 
+  /* Tailwind's default sans stack is DM Sans too, so `font-sans` utilities
+     and any unstyled element land on the body face. */
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Poppins", ui-sans-serif, system-ui, sans-serif;
   --font-body: "DM Sans", ui-sans-serif, system-ui, sans-serif;
 }
@@ -27,15 +33,7 @@ body {
   color: #0f172a;
   -webkit-font-smoothing: antialiased;
 }
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-heading);
-}
+/* Heading typography (Poppins Bold) is defined in src/styles/nuria-fonts.css. */
 
 /* Visible focus states for accessibility */
 :focus-visible {

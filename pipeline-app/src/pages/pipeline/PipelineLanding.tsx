@@ -29,7 +29,8 @@ export default function PipelineLanding() {
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">Nuria Client Pipeline</span>
+            <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">Nuria AI</span>
+            <span className="text-sm font-medium text-slate-400">Nuria Client Pipeline</span>
           </div>
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-600">
             <a href="#features" className="hover:text-[#1A9EF2] transition-colors">Features</a>
@@ -228,7 +229,7 @@ export default function PipelineLanding() {
       {/* Footer */}
       <footer className="py-10 bg-white border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} First Creation Media. Nuria Client Pipeline is a product of First Creation Media.</p>
+          <p className="text-sm text-slate-400">&copy; {new Date().getFullYear()} Nuria AI · Nuria Client Pipeline is a product of First Creation Media.</p>
         </div>
       </footer>
     </div>

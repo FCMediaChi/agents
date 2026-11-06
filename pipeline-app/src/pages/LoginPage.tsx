@@ -45,7 +45,7 @@ export default function LoginPage() {
         <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand text-white">
           <Send className="h-5 w-5" />
         </span>
-        <span className="text-lg font-semibold text-slate-800">Nuria Client Pipeline</span>
+        <span className="text-lg font-semibold text-slate-800">Nuria AI<span className="ml-1.5 font-normal text-slate-400">· Nuria Client Pipeline</span></span>
       </Link>
 
       <Card className="w-full max-w-md p-6 sm:p-8">

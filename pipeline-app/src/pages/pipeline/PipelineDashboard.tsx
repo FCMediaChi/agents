@@ -60,7 +60,8 @@ export default function PipelineDashboard() {
       {/* Sidebar */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col flex-shrink-0">
         <div className="p-5 border-b border-slate-100">
-          <Link to="/pipeline" className="text-lg font-bold bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">Nuria Pipeline</Link>
+          <Link to="/pipeline" className="text-lg font-bold bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">Nuria AI</Link>
+          <p className="text-[11px] font-medium text-slate-400">Nuria Client Pipeline</p>
           {data?.agency && <p className="text-xs text-slate-400 mt-1 truncate">{data.agency.agency_name}</p>}
         </div>
         <nav className="flex-1 p-3 space-y-1">

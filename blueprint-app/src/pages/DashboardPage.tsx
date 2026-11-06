@@ -140,7 +140,7 @@ export default function DashboardPage() {
             <div className="w-8 h-8 rounded-lg bg-[#1A9EF2] flex items-center justify-center">
               <Compass className="w-5 h-5 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900">Nuria Website Blueprint</span>
+            <span className="text-lg font-bold text-slate-900">Nuria AI<span className="ml-2 text-sm font-normal text-slate-400">· Nuria Website Blueprint</span></span>
           </div>
           <div className="flex items-center gap-4">
             <a href="/account" className="text-sm text-slate-500 hover:text-[#1A9EF2] transition-colors">Settings</a>

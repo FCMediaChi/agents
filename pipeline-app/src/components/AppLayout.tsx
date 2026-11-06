@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
               <Send className="h-5 w-5" />
             </span>
-            <span className="text-sm font-semibold text-slate-800">Nuria Pipeline</span>
+            <span className="text-sm font-semibold text-slate-800">Nuria AI<span className="ml-1.5 font-normal text-slate-400">· Nuria Client Pipeline</span></span>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
             {navItems.map(({ to, label, icon: Icon }) => (

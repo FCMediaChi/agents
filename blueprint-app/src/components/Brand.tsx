@@ -12,7 +12,10 @@ export default function Brand({ size = 'md', to = '/' }: { size?: 'sm' | 'md'; t
       <span className={`flex ${box} items-center justify-center rounded-lg bg-brand text-white`}>
         <LayoutTemplate className={icon} />
       </span>
-      <span className={`${text} font-semibold text-slate-800`}>{APP_NAME}</span>
+      <span className={`${text} font-semibold text-slate-800`}>
+        Nuria AI
+        <span className="ml-1.5 font-normal text-slate-400">· {APP_NAME}</span>
+      </span>
     </Link>
   );
 }
