@@ -143,7 +143,7 @@ const FAQ_ITEMS = [
 
 export default function AuditPage() {
   useEffect(() => {
-    document.title = 'Nuria Website Audit';
+    document.title = 'Nuria Website Audit | Nuria AI';
   }, []);
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -404,7 +404,7 @@ export default function AuditPage() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 py-8 text-center text-xs text-slate-400">
-          Nuria Website Audit by First Creation Media
+          Nuria AI · Nuria Website Audit by First Creation Media
         </div>
       </footer>
     </div>

@@ -30,9 +30,9 @@ export default function PipelineRegister() {
         <div className="text-center mb-8">
           <Link to="/pipeline" className="inline-flex items-center gap-2 text-2xl font-bold bg-gradient-to-r from-[#1A9EF2] to-[#4551D3] bg-clip-text text-transparent">
             <Sparkles className="w-6 h-6 text-[#1A9EF2]" />
-            Nuria Client Pipeline
+            Nuria AI
           </Link>
-          <p className="text-slate-500 mt-2">Start your 7-day free trial</p>
+          <p className="text-slate-500 mt-2">Nuria Client Pipeline — Start your 7-day free trial</p>
         </div>
 
         {/* Trial info card */}

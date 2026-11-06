@@ -42,7 +42,7 @@ export default function LandingPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
             <LayoutTemplate className="h-5 w-5" />
           </span>
-          <span className="text-sm font-semibold">{APP_NAME}</span>
+          <span className="text-sm font-semibold">Nuria AI<span className="ml-1.5 font-normal text-slate-400">· {APP_NAME}</span></span>
         </div>
         <nav className="flex items-center gap-2">
           {user ? (
@@ -194,7 +194,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t border-slate-100 py-8 text-center text-xs text-slate-400">
-        <p>{APP_NAME} — by First Creation Media.</p>
+        <p>Nuria AI · {APP_NAME} — by First Creation Media.</p>
       </footer>
     </div>
   );
