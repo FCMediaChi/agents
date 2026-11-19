@@ -26,7 +26,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
               <ClipboardCheck className="h-5 w-5" />
             </span>
-            <span className="text-sm font-semibold text-slate-800">Nuria QA</span>
+            <span className="text-sm font-semibold text-slate-800">Nuria AI</span>
+            <span className="hidden text-sm text-slate-400 sm:inline">Design QA</span>
           </Link>
 
           <nav className="hidden items-center gap-1 sm:flex">

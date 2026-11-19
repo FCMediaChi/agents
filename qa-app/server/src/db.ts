@@ -210,6 +210,8 @@ function initializeSchema(): void {
     'CREATE INDEX IF NOT EXISTS idx_qa_runs_project_id ON qa_runs(project_id)',
     'CREATE INDEX IF NOT EXISTS idx_checklist_items_category_id ON checklist_items(category_id)',
     'CREATE INDEX IF NOT EXISTS idx_qa_results_qa_run_id ON qa_results(qa_run_id)',
+    // One answer row per item per run (Phase 2 checklist upserts).
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_qa_results_run_item ON qa_results(qa_run_id, checklist_item_id)',
     'CREATE INDEX IF NOT EXISTS idx_qa_results_checklist_item_id ON qa_results(checklist_item_id)',
     'CREATE INDEX IF NOT EXISTS idx_ai_interactions_user_id ON ai_interactions(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_ai_interactions_project_id ON ai_interactions(project_id)',

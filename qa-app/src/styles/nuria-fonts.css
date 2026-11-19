@@ -1,0 +1,70 @@
+/*
+ * Nuria AI house style — shared by blueprint-app, audit-app and pipeline-app.
+ *
+ * Keep this file byte-identical in all three apps (see NURIA-BRAND-STYLE.md at
+ * the repo root). Import it from src/index.css, directly after the
+ * `@import "tailwindcss";` line.
+ *
+ *  - Headings: Poppins Bold (700)
+ *  - Body / UI text: DM Sans
+ *
+ * The font files are bundled in public/fonts/ and served from /fonts/* by Vite
+ * (dev) and by the Express static handler (production), so nothing is fetched
+ * from Google Fonts or any other external CDN at runtime.
+ */
+
+/* Poppins — headings. Regular/Medium/SemiBold are declared so any stray
+   non-heading Poppins usage still resolves; headings are pinned to 700 below. */
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Poppins";
+  src: url("/fonts/Poppins-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* DM Sans — body copy. One variable woff2 covers weights 100–900. */
+@font-face {
+  font-family: "DM Sans";
+  src: url("/fonts/dm-sans-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Headings are Poppins Bold everywhere (owner direction, 2026-11-06).
+   Left UNLAYERED on purpose: a rule inside `@layer base` loses to Tailwind
+   utilities such as `font-semibold` / `font-bold` / `font-extrabold`, so the
+   headings would keep rendering at the utility weight. Unlayered rules beat
+   every layered one, which is what makes `getComputedStyle(h1)` report
+   Poppins + 700 in the browser. Do not move this into @layer. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Poppins", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-weight: 700;
+}

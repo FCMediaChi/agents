@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Pencil, Trash2, Globe, User } from 'lucide-react';
+import { ArrowLeft, Pencil, Trash2, Globe, User, ClipboardList } from 'lucide-react';
 import { api, type Project } from '../lib/api';
 import { PLATFORMS, WEBSITE_TYPES, PROJECT_STATUSES, PROJECT_STATUS_LABELS } from '../lib/constants';
 import { Alert, Button, Card, Field, Input, Select, Spinner, StatusBadge, Textarea } from '../components/ui';
@@ -184,10 +184,20 @@ export default function ProjectDetailPage() {
         </Card>
       )}
 
-      {/* Upcoming capabilities */}
-      <Card className="mt-6 border-dashed p-6 text-sm text-slate-500">
-        <p className="font-semibold text-slate-700">What's next</p>
-        <p className="mt-1">The structured QA checklist, scoring, and launch-readiness engine arrive in the next phase of development.</p>
+      {/* QA checklist */}
+      <Card className="mt-6 p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="font-semibold text-slate-700">QA checklist</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Work through the structured pre-launch checklist and get a QA readiness score for this project.
+            </p>
+          </div>
+          <Button onClick={() => navigate(`/projects/${project.id}/qa`)}>
+            <ClipboardList className="h-4 w-4" />
+            Open QA checklist
+          </Button>
+        </div>
       </Card>
 
       {/* Delete */}

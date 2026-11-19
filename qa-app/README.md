@@ -10,9 +10,9 @@ database, login, and routes, sharing only the Nuria brand identity.
 This repository contains the Blueprint/Audit/Pipeline app (root) and this QA Assistant app under
 `qa-app/`. The QA Assistant is built and deployed independently.
 
-> **Phase 1 status:** authentication + database + project management are implemented. The checklist
-> engine, scoring, launch-readiness, autosave, AI assistant, and reports are planned for later
-> phases. No AI yet, no fake scaffolding.
+> **Phase 2 status:** authentication, database, project management, the structured QA checklist and the
+> deterministic scoring / launch-readiness engine are implemented (see `PHASE-2.md`). No AI yet, no
+> fake scaffolding: everything the app reports is computed in plain code from your own answers.
 
 ## Tech stack
 

@@ -10,7 +10,8 @@
     "build": "tsc -b && vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "start": "PORT=3101 NODE_ENV=production tsx server/src/index.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:qa": "node --import tsx --test server/src/qa/scoring.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
