@@ -110,12 +110,105 @@ export interface QaChecklistResponse {
   run: QaRun;
   summary: QaSummary;
   categories: QaCategory[];
+  runs: QaRunSummary[];
+  currentRunId: string;
+  is_current: boolean;
 }
 
 export interface QaAnswerResponse {
   item: QaItem;
   summary: QaSummary;
   run: QaRun;
+  runs: QaRunSummary[];
+  currentRunId: string;
+  is_current: boolean;
+}
+
+/** One entry in a project's run history (Phase 3). */
+export interface QaRunSummary {
+  id: string;
+  label: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  score: number | null;
+  completion_percentage: number | null;
+  launch_status: QaReadinessStatus | null;
+  answered: number;
+  is_current: boolean;
+}
+
+export interface QaRunsResponse {
+  runs: QaRunSummary[];
+  currentRunId: string | null;
+}
+
+export interface QaItemChange {
+  id: string;
+  title: string;
+  categoryId: string;
+  categoryName: string;
+  severity: QaSeverity;
+  from: QaAnswerStatus;
+  to: QaAnswerStatus;
+}
+
+export interface QaSingleSideItem {
+  id: string;
+  title: string;
+  categoryId: string;
+  categoryName: string;
+  severity: QaSeverity;
+  status: QaAnswerStatus;
+}
+
+export interface QaMetricDelta {
+  base: number | null;
+  head: number | null;
+  delta: number | null;
+}
+
+export interface QaCountDelta {
+  base: number;
+  head: number;
+  delta: number;
+}
+
+export interface QaComparison {
+  base: QaRunSnapshot;
+  head: QaRunSnapshot;
+  score: QaMetricDelta;
+  completion: QaMetricDelta;
+  readiness: { base: QaReadinessStatus; head: QaReadinessStatus; direction: 'improved' | 'unchanged' | 'worsened' };
+  counts: {
+    passed: QaCountDelta;
+    failed: QaCountDelta;
+    needsReview: QaCountDelta;
+    notChecked: QaCountDelta;
+    notApplicable: QaCountDelta;
+    criticalFailures: QaCountDelta;
+  };
+  fixed: QaItemChange[];
+  broken: QaItemChange[];
+  stillFailing: QaItemChange[];
+  improved: QaItemChange[];
+  worsened: QaItemChange[];
+  otherChanges: QaItemChange[];
+  onlyInBase: QaSingleSideItem[];
+  onlyInHead: QaSingleSideItem[];
+  totals: { comparable: number; changed: number; unchangedPassing: number };
+}
+
+export interface QaRunSnapshot {
+  runId: string;
+  label: string | null;
+  startedAt: string | null;
+  score: number | null;
+  completionPercentage: number;
+  readiness: QaReadinessStatus;
+}
+
+export interface QaComparisonResponse {
+  comparison: QaComparison;
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -178,6 +271,16 @@ export const api = {
 
   qa: {
     get: (projectId: string) => request<QaChecklistResponse>(`/projects/${projectId}/qa`),
+    runs: (projectId: string) => request<QaRunsResponse>(`/projects/${projectId}/qa/runs`),
+    getRun: (projectId: string, runId: string) =>
+      request<QaChecklistResponse>(`/projects/${projectId}/qa/runs/${runId}`),
+    startRun: (projectId: string, data: { label?: string; carryForward?: boolean } = {}) =>
+      request<QaChecklistResponse>(`/projects/${projectId}/qa/runs`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    compare: (projectId: string, baseId: string, headId: string) =>
+      request<QaComparisonResponse>(`/projects/${projectId}/qa/runs/${baseId}/compare/${headId}`),
     answer: (projectId: string, itemId: string, data: { status?: QaAnswerStatus; notes?: string | null }) =>
       request<QaAnswerResponse>(`/projects/${projectId}/qa/answers/${itemId}`, {
         method: 'PATCH',
