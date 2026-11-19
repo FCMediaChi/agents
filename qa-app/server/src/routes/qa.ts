@@ -6,7 +6,10 @@ import { authenticate } from '../middleware/auth.js';
 import { CreateRunSchema, UpdateAnswerSchema } from '../schemas/qa.js';
 import type { Severity } from '../qa/catalog.js';
 import { computeScore, type AnswerStatus, type ReadinessStatus, type ScorableItem } from '../qa/scoring.js';
-import { compareRuns, type ComparableItem } from '../qa/compare.js';
+import { compareRuns, type ComparableItem, type RunComparison } from '../qa/compare.js';
+import { buildReportModel, reportFilename } from '../report/model.js';
+import { renderReportHtml } from '../report/html.js';
+import { renderReportPdf } from '../report/pdf.js';
 
 const router = Router({ mergeParams: true });
 
@@ -471,6 +474,90 @@ router.patch('/answers/:itemId', (req: AuthenticatedRequest, res: Response): voi
     currentRunId: payload.currentRunId,
     is_current: payload.is_current,
   });
+});
+
+/**
+ * Build the shared report model for one run, optionally compared against an earlier run.
+ * Returns null after writing an error response (unknown run, or an unknown comparison run).
+ */
+function buildReport(req: AuthenticatedRequest, res: Response, project: Project, run: QaRun) {
+  const payload = buildChecklist(project, run);
+
+  let comparison: RunComparison | null = null;
+  const compareToId = typeof req.query.compareTo === 'string' ? req.query.compareTo.trim() : '';
+  if (compareToId && compareToId !== run.id) {
+    const baseRun = findRun(project, compareToId);
+    if (!baseRun) {
+      res.status(404).json({ error: 'Comparison run not found for this project' });
+      return null;
+    }
+    const items = loadApplicableItems(project);
+    comparison = compareRuns(
+      buildComparisonSide(baseRun, items),
+      buildComparisonSide(run, items),
+    );
+  }
+
+  return buildReportModel({
+    project,
+    run,
+    categories: payload.categories,
+    summary: payload.summary,
+    comparison,
+  });
+}
+
+// GET /api/projects/:projectId/qa/runs/:runId/report.html — self-contained HTML report
+router.get('/runs/:runId/report.html', (req: AuthenticatedRequest, res: Response): void => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const run = findRun(project, String(req.params.runId));
+  if (!run) {
+    res.status(404).json({ error: 'QA run not found for this project' });
+    return;
+  }
+
+  const model = buildReport(req, res, project, run);
+  if (!model) return;
+
+  persistDb();
+
+  res
+    .status(200)
+    .setHeader('Content-Type', 'text/html; charset=utf-8')
+    .setHeader('Content-Disposition', `attachment; filename="${reportFilename(model, 'html')}"`)
+    .setHeader('Cache-Control', 'no-store')
+    .send(renderReportHtml(model));
+});
+
+// GET /api/projects/:projectId/qa/runs/:runId/report.pdf — generated PDF report
+router.get('/runs/:runId/report.pdf', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const run = findRun(project, String(req.params.runId));
+  if (!run) {
+    res.status(404).json({ error: 'QA run not found for this project' });
+    return;
+  }
+
+  const model = buildReport(req, res, project, run);
+  if (!model) return;
+
+  try {
+    const bytes = await renderReportPdf(model);
+    persistDb();
+    res
+      .status(200)
+      .setHeader('Content-Type', 'application/pdf')
+      .setHeader('Content-Disposition', `attachment; filename="${reportFilename(model, 'pdf')}"`)
+      .setHeader('Cache-Control', 'no-store')
+      .send(Buffer.from(bytes));
+  } catch (err) {
+    console.error('[qa] failed to render PDF report:', err);
+    res.status(500).json({ error: 'Unable to generate the PDF report' });
+  }
 });
 
 export default router;

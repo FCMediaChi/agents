@@ -8,6 +8,9 @@ import {
   Circle,
   CircleSlash,
   ClipboardList,
+  Download,
+  FileCode2,
+  FileText,
   GitCompareArrows,
   Gauge,
   History,
@@ -99,6 +102,7 @@ export default function QaChecklistPage() {
   const [starting, setStarting] = useState(false);
   const [compareBase, setCompareBase] = useState('');
   const [compareHead, setCompareHead] = useState('');
+  const [exportCompareTo, setExportCompareTo] = useState('');
 
   const load = useCallback(
     async (runId: string | null) => {
@@ -123,6 +127,12 @@ export default function QaChecklistPage() {
   useEffect(() => {
     void load(viewingRunId);
   }, [load, viewingRunId]);
+
+  // A comparison chosen for one run does not carry over to another run's export.
+  const viewedRunId = data?.run.id;
+  useEffect(() => {
+    setExportCompareTo('');
+  }, [viewedRunId]);
 
   const summary: QaSummary | null = data?.summary ?? null;
   const readOnly = Boolean(data) && !data?.is_current;
@@ -310,6 +320,14 @@ export default function QaChecklistPage() {
       )}
 
       <ScorePanel summary={summary} />
+
+      <ReportExport
+        projectId={id ?? ''}
+        runId={data.run.id}
+        runs={data.runs}
+        compareTo={exportCompareTo}
+        onCompareToChange={setExportCompareTo}
+      />
 
       <RunHistory
         runs={data.runs}
@@ -592,6 +610,76 @@ function RunHistory({
             </Button>
           </>
         )}
+      </div>
+    </Card>
+  );
+}
+
+function ReportExport({
+  projectId,
+  runId,
+  runs,
+  compareTo,
+  onCompareToChange,
+}: {
+  projectId: string;
+  runId: string;
+  runs: QaRunSummary[];
+  compareTo: string;
+  onCompareToChange: (value: string) => void;
+}) {
+  const others = runs.filter((run) => run.id !== runId);
+  const linkBase =
+    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors';
+
+  return (
+    <Card className="mt-4 p-5">
+      <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+        <FileText className="h-4 w-4 text-slate-400" />
+        Export report
+      </h2>
+      <p className="mt-1 max-w-2xl text-sm text-slate-600">
+        A client-ready report of this run: the readiness score and gate, the category breakdown, and every
+        failing or needs-review check with your notes. Download it as a PDF, or as a single HTML file you can
+        open or forward anywhere.
+      </p>
+
+      {others.length > 0 && (
+        <label className="mt-3 block max-w-sm text-xs font-semibold text-slate-500">
+          Compare against an earlier run
+          <select
+            value={compareTo}
+            onChange={(event) => onCompareToChange(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal text-slate-900 focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand"
+          >
+            <option value="">No comparison</option>
+            {others.map((run) => (
+              <option key={run.id} value={run.id}>
+                {run.label || 'QA run'} · {formatDate(run.started_at)} · {run.score === null ? '—' : run.score}
+              </option>
+            ))}
+          </select>
+          <span className="mt-1 block text-[11px] font-normal text-slate-500">
+            Adds what was fixed and what broke since that run.
+          </span>
+        </label>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <a
+          href={api.qa.reportUrl(projectId, runId, 'pdf', compareTo)}
+          className={`${linkBase} bg-brand text-white hover:bg-brand/90`}
+        >
+          <Download className="h-4 w-4" />
+          Download PDF
+        </a>
+        <a
+          href={api.qa.reportUrl(projectId, runId, 'html', compareTo)}
+          className={`${linkBase} bg-brand-light text-brand-secondary hover:bg-brand-light/70`}
+        >
+          <FileCode2 className="h-4 w-4" />
+          Download HTML
+        </a>
       </div>
     </Card>
   );

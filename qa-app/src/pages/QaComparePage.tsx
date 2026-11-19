@@ -7,6 +7,8 @@ import {
   ArrowDownRight,
   CheckCircle2,
   ClipboardList,
+  Download,
+  FileCode2,
   Info,
   Minus,
   ShieldAlert,
@@ -167,6 +169,24 @@ export default function QaComparePage() {
             {runName(baseRun)} → {runName(headRun)} · what got fixed, what broke, and how the score moved
           </p>
         </div>
+        {id && headId && baseId && baseId !== headId && (
+          <div className="flex flex-wrap gap-2">
+            <a
+              href={api.qa.reportUrl(id, headId, 'pdf', baseId)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-brand/90"
+            >
+              <Download className="h-4 w-4" />
+              Export PDF
+            </a>
+            <a
+              href={api.qa.reportUrl(id, headId, 'html', baseId)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-light px-4 py-2.5 text-sm font-semibold text-brand-secondary transition-colors hover:bg-brand-light/70"
+            >
+              <FileCode2 className="h-4 w-4" />
+              Export HTML
+            </a>
+          </div>
+        )}
       </div>
 
       {runs.length >= 2 && (

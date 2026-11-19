@@ -281,6 +281,13 @@ export const api = {
       }),
     compare: (projectId: string, baseId: string, headId: string) =>
       request<QaComparisonResponse>(`/projects/${projectId}/qa/runs/${baseId}/compare/${headId}`),
+    /** Download URL for the client-ready report (Phase 4). Cookie auth, so a plain link works. */
+    reportUrl: (projectId: string, runId: string, format: 'html' | 'pdf', compareTo?: string) => {
+      const params = new URLSearchParams();
+      if (compareTo && compareTo !== runId) params.set('compareTo', compareTo);
+      const query = params.toString();
+      return `${API_BASE}/projects/${projectId}/qa/runs/${runId}/report.${format}${query ? `?${query}` : ''}`;
+    },
     answer: (projectId: string, itemId: string, data: { status?: QaAnswerStatus; notes?: string | null }) =>
       request<QaAnswerResponse>(`/projects/${projectId}/qa/answers/${itemId}`, {
         method: 'PATCH',
