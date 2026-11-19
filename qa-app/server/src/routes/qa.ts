@@ -3,9 +3,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { getDb, persistDb } from '../db.js';
 import type { AuthenticatedRequest, Project, QaRun } from '../types.js';
 import { authenticate } from '../middleware/auth.js';
-import { UpdateAnswerSchema } from '../schemas/qa.js';
+import { CreateRunSchema, UpdateAnswerSchema } from '../schemas/qa.js';
 import type { Severity } from '../qa/catalog.js';
-import { computeScore, type AnswerStatus, type ScorableItem } from '../qa/scoring.js';
+import { computeScore, type AnswerStatus, type ReadinessStatus, type ScorableItem } from '../qa/scoring.js';
+import { compareRuns, type ComparableItem } from '../qa/compare.js';
 
 const router = Router({ mergeParams: true });
 
@@ -31,6 +32,10 @@ interface AnswerRow {
   status: string;
   notes: string | null;
   reviewed_at: string | null;
+}
+
+interface RunListRow extends QaRun {
+  answered: number;
 }
 
 function getProject(req: AuthenticatedRequest, res: Response): Project | null {
@@ -84,19 +89,32 @@ function loadApplicableItems(project: Project): ChecklistItemRow[] {
   return rows.filter((row) => isApplicable(row, project.website_type));
 }
 
-function getOrCreateRun(project: Project): QaRun {
+/** Runs newest first. The first one is the current run (Phase 3: a run is never deleted). */
+function listRunRows(project: Project): RunListRow[] {
+  return getDb()
+    .prepare(
+      `SELECT r.*,
+              (SELECT COUNT(*) FROM qa_results res
+                WHERE res.qa_run_id = r.id
+                  AND res.status IN ('pass', 'fail', 'needs_review', 'not_applicable')) AS answered
+         FROM qa_runs r
+        WHERE r.project_id = ?
+        ORDER BY r.created_at DESC, r.rowid DESC`,
+    )
+    .all(project.id) as RunListRow[];
+}
+
+function getCurrentRun(project: Project): QaRun | null {
+  return (listRunRows(project)[0] as QaRun | undefined) ?? null;
+}
+
+function createRun(project: Project, label: string | null): QaRun {
   const db = getDb();
-  const existing = db
-    .prepare('SELECT * FROM qa_runs WHERE project_id = ? ORDER BY created_at DESC LIMIT 1')
-    .get(project.id) as QaRun | undefined;
-
-  if (existing) return existing;
-
   const now = new Date().toISOString();
   const run: QaRun = {
     id: uuidv4(),
     project_id: project.id,
-    label: 'Launch review',
+    label,
     version: '1.0',
     started_at: now,
     completed_at: null,
@@ -116,6 +134,34 @@ function getOrCreateRun(project: Project): QaRun {
   return run;
 }
 
+/** Phase 2 behaviour: the checklist page always has a run to show. */
+function getOrCreateRun(project: Project): QaRun {
+  return getCurrentRun(project) ?? createRun(project, 'Launch review');
+}
+
+/** Copy the previous run's real answers into a new run as its starting point. */
+function carryAnswersForward(previousRunId: string, newRunId: string, reviewedBy: string): number {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const rows = db
+    .prepare(
+      `SELECT checklist_item_id, status, notes FROM qa_results
+        WHERE qa_run_id = ? AND status IN ('pass', 'fail', 'needs_review', 'not_applicable')`,
+    )
+    .all(previousRunId) as Array<{ checklist_item_id: string; status: string; notes: string | null }>;
+
+  const insert = db.prepare(
+    `INSERT INTO qa_results (id, qa_run_id, checklist_item_id, status, notes, reviewed_at, reviewed_by)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+
+  for (const row of rows) {
+    insert.run(uuidv4(), newRunId, row.checklist_item_id, row.status, row.notes, now, reviewedBy);
+  }
+
+  return rows.length;
+}
+
 function loadAnswers(runId: string): Map<string, AnswerRow> {
   const rows = getDb()
     .prepare('SELECT checklist_item_id, status, notes, reviewed_at FROM qa_results WHERE qa_run_id = ?')
@@ -124,28 +170,46 @@ function loadAnswers(runId: string): Map<string, AnswerRow> {
   return new Map(rows.map((row) => [row.checklist_item_id, row]));
 }
 
-/**
- * Build the whole checklist response for a project: the run, the items grouped by
- * category with their answers, and the deterministically computed summary.
- * Also persists the computed score onto the run row.
- */
-function buildChecklist(project: Project) {
-  const db = getDb();
-  const run = getOrCreateRun(project);
-  const items = loadApplicableItems(project);
-  const answers = loadAnswers(run.id);
-
-  const scorable: ScorableItem[] = items.map((item) => ({
+function toScorable(items: ChecklistItemRow[], answers: Map<string, AnswerRow>): ScorableItem[] {
+  return items.map((item) => ({
     id: item.id,
     categoryId: item.category_id,
     categoryName: item.category_name,
     severity: item.severity,
     status: normalizeStatus(answers.get(item.id)?.status),
   }));
+}
 
-  const summary = computeScore(scorable);
+/** The run history as the client renders it. */
+function serializeRuns(project: Project) {
+  const rows = listRunRows(project);
+  return rows.map((row, index) => ({
+    id: row.id,
+    label: row.label,
+    started_at: row.started_at,
+    completed_at: row.completed_at,
+    score: row.score,
+    completion_percentage: row.completion_percentage,
+    launch_status: row.launch_status as ReadinessStatus | null,
+    answered: row.answered ?? 0,
+    is_current: index === 0,
+  }));
+}
+
+/**
+ * Build the whole checklist response for one run: the run, the items grouped by
+ * category with their answers, the deterministically computed summary, and the run
+ * history. Also persists the computed score onto the run row.
+ */
+function buildChecklist(project: Project, run: QaRun) {
+  const db = getDb();
+  const items = loadApplicableItems(project);
+  const answers = loadAnswers(run.id);
+
+  const summary = computeScore(toScorable(items, answers));
   const now = new Date().toISOString();
-  const completedAt = summary.completionPercentage === 100 && summary.counts.total > 0 ? now : null;
+  const completedAt =
+    summary.completionPercentage === 100 && summary.counts.total > 0 ? (run.completed_at ?? now) : null;
 
   db.prepare(
     `UPDATE qa_runs
@@ -203,6 +267,8 @@ function buildChecklist(project: Project) {
     });
   }
 
+  const runs = serializeRuns(project);
+
   return {
     run: {
       id: run.id,
@@ -219,18 +285,137 @@ function buildChecklist(project: Project) {
     },
     summary,
     categories: categoryOrder.map((id) => categories.get(id)!),
+    runs,
+    currentRunId: runs.find((entry) => entry.is_current)?.id ?? run.id,
+    is_current: runs[0]?.id === run.id,
   };
 }
 
-// GET /api/projects/:projectId/qa — checklist + score
+/** Fetch one run of this project, or null. */
+function findRun(project: Project, runId: string): QaRun | null {
+  const row = getDb()
+    .prepare('SELECT * FROM qa_runs WHERE id = ? AND project_id = ?')
+    .get(runId, project.id) as QaRun | undefined;
+  return row ?? null;
+}
+
+/** One side of a comparison: the run's headline numbers plus its per-item answers. */
+function buildComparisonSide(run: QaRun, items: ChecklistItemRow[]) {
+  const answers = loadAnswers(run.id);
+  const scorable = toScorable(items, answers);
+  const summary = computeScore(scorable);
+
+  const comparable: ComparableItem[] = items.map((item, index) => ({
+    id: item.id,
+    title: item.title,
+    categoryId: item.category_id,
+    categoryName: item.category_name,
+    severity: item.severity,
+    status: scorable[index].status,
+  }));
+
+  return {
+    snapshot: {
+      runId: run.id,
+      label: run.label,
+      startedAt: run.started_at,
+      score: summary.score,
+      completionPercentage: summary.completionPercentage,
+      readiness: summary.readiness.status,
+    },
+    items: comparable,
+  };
+}
+
+// GET /api/projects/:projectId/qa — current run: checklist + score + run history
 router.get('/', (req: AuthenticatedRequest, res: Response): void => {
   const project = getProject(req, res);
   if (!project) return;
 
-  res.json(buildChecklist(project));
+  res.json(buildChecklist(project, getOrCreateRun(project)));
 });
 
-// PATCH /api/projects/:projectId/qa/answers/:itemId — set status and/or notes
+// GET /api/projects/:projectId/qa/runs — run history, newest first
+router.get('/runs', (req: AuthenticatedRequest, res: Response): void => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const runs = serializeRuns(project);
+  res.json({ runs, currentRunId: runs.find((entry) => entry.is_current)?.id ?? null });
+});
+
+// POST /api/projects/:projectId/qa/runs — start a new run (carries answers forward by default)
+router.post('/runs', (req: AuthenticatedRequest, res: Response): void => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const parsed = CreateRunSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten().fieldErrors });
+    return;
+  }
+
+  const previous = getCurrentRun(project);
+  const label = parsed.data.label?.trim() || `Run ${listRunRows(project).length + 1}`;
+  const run = createRun(project, label);
+
+  try {
+    if (parsed.data.carryForward !== false && previous) {
+      carryAnswersForward(previous.id, run.id, req.user!.email);
+    }
+  } catch (err) {
+    // Never leave a half-built run behind in the history.
+    const db = getDb();
+    db.prepare('DELETE FROM qa_results WHERE qa_run_id = ?').run(run.id);
+    db.prepare('DELETE FROM qa_runs WHERE id = ?').run(run.id);
+    persistDb();
+    console.error('[qa] failed to start a new run:', err);
+    res.status(500).json({ error: 'Unable to start a new run' });
+    return;
+  }
+
+  const payload = buildChecklist(project, run);
+  persistDb();
+
+  res.status(201).json(payload);
+});
+
+// GET /api/projects/:projectId/qa/runs/:baseId/compare/:headId — run-over-run comparison
+router.get('/runs/:baseId/compare/:headId', (req: AuthenticatedRequest, res: Response): void => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const baseRun = findRun(project, String(req.params.baseId));
+  const headRun = findRun(project, String(req.params.headId));
+  if (!baseRun || !headRun) {
+    res.status(404).json({ error: 'QA run not found for this project' });
+    return;
+  }
+
+  const items = loadApplicableItems(project);
+  const comparison = compareRuns(
+    buildComparisonSide(baseRun, items),
+    buildComparisonSide(headRun, items),
+  );
+
+  res.json({ comparison });
+});
+
+// GET /api/projects/:projectId/qa/runs/:runId — one run's checklist (past runs are read only)
+router.get('/runs/:runId', (req: AuthenticatedRequest, res: Response): void => {
+  const project = getProject(req, res);
+  if (!project) return;
+
+  const run = findRun(project, String(req.params.runId));
+  if (!run) {
+    res.status(404).json({ error: 'QA run not found for this project' });
+    return;
+  }
+
+  res.json(buildChecklist(project, run));
+});
+
+// PATCH /api/projects/:projectId/qa/answers/:itemId — set status and/or notes on the current run
 router.patch('/answers/:itemId', (req: AuthenticatedRequest, res: Response): void => {
   const project = getProject(req, res);
   if (!project) return;
@@ -271,14 +456,21 @@ router.patch('/answers/:itemId', (req: AuthenticatedRequest, res: Response): voi
     ).run(uuidv4(), run.id, item.id, status, notes, reviewedAt, req.user!.email);
   }
 
-  const payload = buildChecklist(project);
+  const payload = buildChecklist(project, run);
   persistDb();
 
   const saved = payload.categories
     .flatMap((category) => category.items)
     .find((entry) => entry.id === item.id);
 
-  res.json({ item: saved, summary: payload.summary, run: payload.run });
+  res.json({
+    item: saved,
+    summary: payload.summary,
+    run: payload.run,
+    runs: payload.runs,
+    currentRunId: payload.currentRunId,
+    is_current: payload.is_current,
+  });
 });
 
 export default router;

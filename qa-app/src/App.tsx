@@ -11,6 +11,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import QaChecklistPage from './pages/QaChecklistPage';
+import QaComparePage from './pages/QaComparePage';
 
 export default function App() {
   return (
@@ -59,6 +60,14 @@ export default function App() {
           element={
             <AppLayout>
               <QaChecklistPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/projects/:id/qa/compare"
+          element={
+            <AppLayout>
+              <QaComparePage />
             </AppLayout>
           }
         />

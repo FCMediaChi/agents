@@ -56,8 +56,12 @@ async function main() {
           { method: 'DELETE', path: '/api/projects/:id', description: 'Delete a project' },
         ],
         qa: [
-          { method: 'GET', path: '/api/projects/:projectId/qa', description: 'Checklist grouped by category with answers and the computed QA score' },
-          { method: 'PATCH', path: '/api/projects/:projectId/qa/answers/:itemId', body: '{ status?, notes? }', description: 'Set one item answer (not_checked | pass | fail | needs_review | not_applicable)' },
+          { method: 'GET', path: '/api/projects/:projectId/qa', description: 'Current run: checklist grouped by category with answers, the computed QA score, and the run history' },
+          { method: 'PATCH', path: '/api/projects/:projectId/qa/answers/:itemId', body: '{ status?, notes? }', description: 'Set one item answer on the current run (not_checked | pass | fail | needs_review | not_applicable)' },
+          { method: 'GET', path: '/api/projects/:projectId/qa/runs', description: 'Run history, newest first' },
+          { method: 'POST', path: '/api/projects/:projectId/qa/runs', body: '{ label?, carryForward? }', description: 'Start a new run, carrying the previous answers forward by default' },
+          { method: 'GET', path: '/api/projects/:projectId/qa/runs/:runId', description: "One run's checklist (past runs are read only)" },
+          { method: 'GET', path: '/api/projects/:projectId/qa/runs/:baseId/compare/:headId', description: 'Run-over-run comparison: fixed, broken, still failing, other changes, score movement' },
         ],
       },
     });

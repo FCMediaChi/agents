@@ -13,3 +13,11 @@ export const UpdateAnswerSchema = z
   });
 
 export type UpdateAnswerInput = z.infer<typeof UpdateAnswerSchema>;
+
+/** Start a new QA run. `carryForward` copies the previous run's answers as a starting point. */
+export const CreateRunSchema = z.object({
+  label: z.string().trim().max(120, 'Label must be under 120 characters').optional(),
+  carryForward: z.boolean().optional(),
+});
+
+export type CreateRunInput = z.infer<typeof CreateRunSchema>;
