@@ -29,7 +29,8 @@ export default function LandingPage() {
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white">
             <ClipboardCheck className="h-5 w-5" />
           </span>
-          <span className="text-sm font-semibold">Nuria Design QA Assistant</span>
+          <span className="text-sm font-semibold">Nuria AI</span>
+          <span className="text-sm text-slate-400">Design QA Assistant</span>
         </div>
         <nav className="flex items-center gap-2">
           {user ? (

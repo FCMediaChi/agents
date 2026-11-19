@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage';
 import ProjectsPage from './pages/ProjectsPage';
 import ProjectNewPage from './pages/ProjectNewPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
+import QaChecklistPage from './pages/QaChecklistPage';
 
 export default function App() {
   return (
@@ -50,6 +51,14 @@ export default function App() {
           element={
             <AppLayout>
               <ProjectDetailPage />
+            </AppLayout>
+          }
+        />
+        <Route
+          path="/projects/:id/qa"
+          element={
+            <AppLayout>
+              <QaChecklistPage />
             </AppLayout>
           }
         />

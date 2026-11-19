@@ -42,6 +42,82 @@ interface ApiErrorShape {
   message?: string;
 }
 
+export type QaAnswerStatus = 'not_checked' | 'pass' | 'fail' | 'needs_review' | 'not_applicable';
+export type QaSeverity = 'critical' | 'high' | 'medium' | 'low';
+export type QaReadinessStatus = 'not_started' | 'not_ready' | 'needs_attention' | 'nearly_ready' | 'ready';
+
+export interface QaItem {
+  id: string;
+  title: string;
+  description: string | null;
+  severity: QaSeverity;
+  remediation: string | null;
+  status: QaAnswerStatus;
+  notes: string | null;
+  reviewed_at: string | null;
+}
+
+export interface QaCategory {
+  id: string;
+  name: string;
+  description: string | null;
+  items: QaItem[];
+}
+
+export interface QaCounts {
+  total: number;
+  passed: number;
+  failed: number;
+  needsReview: number;
+  notApplicable: number;
+  notChecked: number;
+  criticalFailures: number;
+  highFailures: number;
+  unreviewedRequired: number;
+}
+
+export interface QaCategoryScore {
+  id: string;
+  name: string;
+  score: number | null;
+  completionPercentage: number;
+  counts: QaCounts;
+}
+
+export interface QaSummary {
+  score: number | null;
+  completionPercentage: number;
+  counts: QaCounts;
+  readiness: { status: QaReadinessStatus; label: string; reason: string };
+  categories: QaCategoryScore[];
+}
+
+export interface QaRun {
+  id: string;
+  project_id: string;
+  label: string | null;
+  version: string;
+  started_at: string | null;
+  completed_at: string | null;
+  score: number | null;
+  completion_percentage: number | null;
+  launch_status: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface QaChecklistResponse {
+  run: QaRun;
+  summary: QaSummary;
+  categories: QaCategory[];
+}
+
+export interface QaAnswerResponse {
+  item: QaItem;
+  summary: QaSummary;
+  run: QaRun;
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     credentials: 'include',
@@ -98,5 +174,14 @@ export const api = {
       request<Project>(`/projects/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: string) =>
       request<{ success: boolean }>(`/projects/${id}`, { method: 'DELETE' }),
+  },
+
+  qa: {
+    get: (projectId: string) => request<QaChecklistResponse>(`/projects/${projectId}/qa`),
+    answer: (projectId: string, itemId: string, data: { status?: QaAnswerStatus; notes?: string | null }) =>
+      request<QaAnswerResponse>(`/projects/${projectId}/qa/answers/${itemId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      }),
   },
 };

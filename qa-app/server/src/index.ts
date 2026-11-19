@@ -8,6 +8,8 @@ import { config } from './config.js';
 import { initDb, persistDb, closeDb } from './db.js';
 import authRoutes from './routes/auth.js';
 import projectRoutes from './routes/projects.js';
+import qaRoutes from './routes/qa.js';
+import { seedChecklist } from './qa/seed.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,6 +24,8 @@ async function main() {
 
   // API routes
   app.use('/api/auth', authRoutes);
+  // Mounted before /api/projects so the nested checklist paths resolve first.
+  app.use('/api/projects/:projectId/qa', qaRoutes);
   app.use('/api/projects', projectRoutes);
 
   // Health check
@@ -51,6 +55,10 @@ async function main() {
           { method: 'PUT', path: '/api/projects/:id', body: 'Partial project fields', description: 'Update a project' },
           { method: 'DELETE', path: '/api/projects/:id', description: 'Delete a project' },
         ],
+        qa: [
+          { method: 'GET', path: '/api/projects/:projectId/qa', description: 'Checklist grouped by category with answers and the computed QA score' },
+          { method: 'PATCH', path: '/api/projects/:projectId/qa/answers/:itemId', body: '{ status?, notes? }', description: 'Set one item answer (not_checked | pass | fail | needs_review | not_applicable)' },
+        ],
       },
     });
   });
@@ -65,6 +73,7 @@ async function main() {
   });
 
   await initDb();
+  seedChecklist();
 
   const server = app.listen(config.port, '0.0.0.0', () => {
     console.log(`[Nuria Design QA Assistant] Server running on http://0.0.0.0:${config.port}`);
