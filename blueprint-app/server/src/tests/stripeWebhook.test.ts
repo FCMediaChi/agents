@@ -158,7 +158,7 @@ await initDb();
 
 console.log('\nMigrations');
 
-await test('legacy users table gains stripe_customer_id + stripe_subscription_id', () => {
+await test('legacy users table gains stripe_customer_id + stripe_subscription_id', async () => {
   const cols = userColumns();
   assert.ok(cols.includes('stripe_customer_id'), 'stripe_customer_id column missing');
   assert.ok(cols.includes('stripe_subscription_id'), 'stripe_subscription_id column missing');
@@ -171,7 +171,7 @@ await test('re-running initDb() is a no-op (idempotent migrations)', async () =>
   assert.equal(cols.filter((c) => c === 'stripe_subscription_id').length, 1);
 });
 
-await test('promo_redemptions table exists', () => {
+await test('promo_redemptions table exists', async () => {
   const names = (getDb().prepare("SELECT name FROM sqlite_master WHERE type='table'").all() as { name: string }[]).map((r) => r.name);
   assert.ok(names.includes('promo_redemptions'));
 });
@@ -193,9 +193,9 @@ const grants: [string, string, string][] = [
 ];
 
 for (const [label, priceId, expectedTier] of grants) {
-  await test(`${label} (${priceId}) → grants ${expectedTier}`, () => {
+  await test(`${label} (${priceId}) → grants ${expectedTier}`, async () => {
     resetUser();
-    const outcome = handleStripeEvent(checkoutCompleted({ priceId }));
+    const outcome = await handleStripeEvent(checkoutCompleted({ priceId }));
     assert.equal(outcome.action, 'granted');
     assert.equal(outcome.tier, expectedTier);
     const row = userRow();
@@ -205,16 +205,16 @@ for (const [label, priceId, expectedTier] of grants) {
   });
 }
 
-await test('PRICE_TO_TIER contains exactly the four Blueprint prices', () => {
+await test('PRICE_TO_TIER contains exactly the four Blueprint prices', async () => {
   assert.deepEqual(
     Object.keys(PRICE_TO_TIER).sort(),
     [SOLO_MONTHLY, SOLO_YEARLY, TEAM_MONTHLY, TEAM_YEARLY].sort()
   );
 });
 
-await test('falls back to metadata.price_id when line_items are absent', () => {
+await test('falls back to metadata.price_id when line_items are absent', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ includeLineItems: false, priceId: null, metadataPriceId: TEAM_YEARLY })
   );
   assert.equal(outcome.action, 'granted');
@@ -222,10 +222,10 @@ await test('falls back to metadata.price_id when line_items are absent', () => {
   assert.equal(userRow().subscription_tier, 'TEAM');
 });
 
-await test('tier is derived from the price paid, never from client_reference_id metadata', () => {
+await test('tier is derived from the price paid, never from client_reference_id metadata', async () => {
   resetUser();
   // Even if metadata claims TEAM, a Solo price grants SOLO only.
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ priceId: SOLO_MONTHLY, metadata: { tier: 'AGENCY', product: 'blueprint' } })
   );
   assert.equal(outcome.tier, 'SOLO');
@@ -233,109 +233,133 @@ await test('tier is derived from the price paid, never from client_reference_id 
 
 console.log('\nEdge cases');
 
-await test('missing client_reference_id → no grant', () => {
+await test('missing client_reference_id → no grant', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ clientReferenceId: null }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ clientReferenceId: null }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'missing_client_reference_id');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('unknown price id → skipped, tier untouched', () => {
+await test('unknown price id → skipped, tier untouched', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ priceId: UNKNOWN_PRICE }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ priceId: UNKNOWN_PRICE }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'unknown_price');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('a Pipeline price does not unlock Blueprint', () => {
+await test('a Pipeline price does not unlock Blueprint', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ priceId: PIPELINE_SOLO_MONTHLY }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ priceId: PIPELINE_SOLO_MONTHLY }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'unknown_price');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('client_reference_id that is not a real user → skipped', () => {
+await test('client_reference_id that is not a real user → skipped', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ clientReferenceId: 'user_does_not_exist' }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ clientReferenceId: 'user_does_not_exist' }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'unknown_user');
 });
 
-await test('session with no resolvable price → skipped', () => {
+await test('session with no resolvable price → skipped', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ includeLineItems: false, priceId: null }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ includeLineItems: false, priceId: null }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'missing_price');
 });
 
-await test('sessionPriceId prefers line_items over metadata', () => {
+await test('payment-link session with no line_items in the payload → session is retrieved and the tier granted', async () => {
+  resetUser();
+  const retrieved: string[] = [];
+  const lookup = {
+    retrieveSession: async (sessionId: string) => {
+      retrieved.push(sessionId);
+      return {
+        id: sessionId,
+        object: 'checkout.session',
+        line_items: { object: 'list', data: [{ id: 'li_1', price: { id: TEAM_YEARLY } }] },
+      } as unknown as Stripe.Checkout.Session;
+    },
+    retrieveSubscription: async (id: string) => ({ id, object: 'subscription' } as unknown as Stripe.Subscription),
+  };
+
+  const event = checkoutCompleted({ includeLineItems: false, priceId: null });
+  const outcome = await handleStripeEvent(event, lookup);
+
+  assert.equal(outcome.action, 'granted');
+  assert.equal(outcome.tier, 'TEAM');
+  assert.deepEqual(retrieved, [(event.data.object as any).id]);
+  assert.equal(userRow().subscription_tier, 'TEAM');
+});
+
+await test('sessionPriceId prefers line_items over metadata', async () => {
   const session = checkoutCompleted({ priceId: SOLO_MONTHLY, metadataPriceId: TEAM_YEARLY });
   assert.equal(sessionPriceId(session.data.object as any), SOLO_MONTHLY);
 });
 
 console.log('\nRevoke logic');
 
-await test('customer.subscription.deleted → revokes to FREE', () => {
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+await test('customer.subscription.deleted → revokes to FREE', async () => {
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
   assert.equal(userRow().subscription_tier, 'TEAM');
 
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
   assert.equal(outcome.action, 'revoked');
   const row = userRow();
   assert.equal(row.subscription_tier, 'FREE');
   assert.equal(row.stripe_subscription_id, null);
 });
 
-await test('revocation is idempotent (repeat event is a no-op, stays FREE)', () => {
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
-  handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
-  const again = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+await test('revocation is idempotent (repeat event is a no-op, stays FREE)', async () => {
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+  await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+  const again = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
   assert.equal(again.action, 'skipped');
   assert.equal(again.reason, 'already_revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (unpaid) → revokes to FREE', () => {
-  handleStripeEvent(checkoutCompleted({ priceId: SOLO_YEARLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'unpaid'));
+await test('customer.subscription.updated (unpaid) → revokes to FREE', async () => {
+  await handleStripeEvent(checkoutCompleted({ priceId: SOLO_YEARLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'unpaid'));
   assert.equal(outcome.action, 'revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (canceled) → revokes to FREE', () => {
-  handleStripeEvent(checkoutCompleted({ priceId: SOLO_YEARLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'canceled'));
+await test('customer.subscription.updated (canceled) → revokes to FREE', async () => {
+  await handleStripeEvent(checkoutCompleted({ priceId: SOLO_YEARLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'canceled'));
   assert.equal(outcome.action, 'revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (active) → entitlement intact', () => {
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'active'));
+await test('customer.subscription.updated (active) → entitlement intact', async () => {
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'active'));
   assert.equal(outcome.action, 'ignored');
   assert.equal(userRow().subscription_tier, 'TEAM');
 });
 
-await test('cancel for an unknown subscription → skipped, no throw', () => {
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled', 'sub_unknown', 'cus_unknown'));
+await test('cancel for an unknown subscription → skipped, no throw', async () => {
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled', 'sub_unknown', 'cus_unknown'));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'no_matching_user');
 });
 
-await test('unrelated event type → ignored', () => {
-  const outcome = handleStripeEvent(evt('invoice.created', { id: 'in_1', object: 'invoice' }));
+await test('unrelated event type → ignored', async () => {
+  const outcome = await handleStripeEvent(evt('invoice.created', { id: 'in_1', object: 'invoice' }));
   assert.equal(outcome.action, 'ignored');
 });
 
 console.log('\nPromo codes');
 
-await test('promo redemption recorded alongside the grant', () => {
+await test('promo redemption recorded alongside the grant', async () => {
   resetUser();
   clearPromos();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({
       priceId: TEAM_YEARLY,
       metadata: { promo_code: 'LAUNCH20', product: 'blueprint', tier: 'TEAM', interval: 'year' },
@@ -349,9 +373,9 @@ await test('promo redemption recorded alongside the grant', () => {
   assert.deepEqual(rows[0], { code: 'LAUNCH20', product: 'blueprint', tier: 'TEAM', interval: 'year' });
 });
 
-await test('promo-only checkout (no user) still records the redemption, grants nothing', () => {
+await test('promo-only checkout (no user) still records the redemption, grants nothing', async () => {
   clearPromos();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({
       clientReferenceId: null,
       priceId: null,
@@ -364,10 +388,10 @@ await test('promo-only checkout (no user) still records the redemption, grants n
   assert.equal(promoRows().length, 1);
 });
 
-await test('invite_code metadata is not redeemed by the webhook (monolith parity)', () => {
+await test('invite_code metadata is not redeemed by the webhook (monolith parity)', async () => {
   resetUser();
   clearPromos();
-  const outcome = handleStripeEvent(checkoutCompleted({ metadata: { invite_code: 'INVITE-ABC' } }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ metadata: { invite_code: 'INVITE-ABC' } }));
   // The grant still comes from the price; no promo row, no tier from the code.
   assert.equal(outcome.action, 'granted');
   assert.equal(outcome.promoRecorded, false);

@@ -32,6 +32,11 @@ export const config = {
   // Stripe API key. Empty in dev/test: the route then parses the raw body
   // without verifying (never do that in production).
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+  // Optional Stripe API key (sk_live_/sk_test_...). Signature verification does
+  // NOT need it — it is used only to read a completed Checkout Session back from
+  // Stripe when the event payload carries no line_items (hosted Payment Links),
+  // so a real purchase can still be matched to the price that was paid.
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
 };
 
 export const isProd = config.nodeEnv === 'production';
