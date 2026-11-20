@@ -14,7 +14,7 @@ const FAQ_ITEMS = [
 
 const HOW_IT_WORKS = [
   { step: '1', icon: Upload, title: 'Upload Client Wins', desc: 'Upload screenshots, input traffic and revenue data, and link the old site — we capture the proof of your impact.' },
-  { step: '2', icon: Search, title: 'Analyze Prospects', desc: 'Enter a prospect URL and our AI analyzes speed, layout, SEO, and accessibility flaws on their current website.' },
+  { step: '2', icon: Search, title: 'Analyze Prospects', desc: 'Enter a prospect URL and the page is fetched and analyzed for speed, layout, SEO, and accessibility flaws.' },
   { step: '3', icon: PenTool, title: 'Generate & Close', desc: 'Get a polished case study and a custom cold email script referencing the prospect\'s real problems — ready to send.' },
 ];
 
@@ -86,11 +86,11 @@ export default function PipelineLanding() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Case Study Generator</h3>
               <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                Upload screenshots, input traffic and revenue data, and link the old site — our AI generates a narrative case study proving your impact.
+                Upload screenshots, input traffic and revenue data, and link the old site — the tool writes a narrative case study proving your impact.
               </p>
               <ul className="space-y-2 text-sm text-slate-600">
                 <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0" /> Upload screenshots & data</li>
-                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0" /> AI-generated narrative</li>
+                <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0" /> Written narrative</li>
                 <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0" /> PDF export & white-label</li>
               </ul>
             </div>
@@ -100,7 +100,7 @@ export default function PipelineLanding() {
               </div>
               <h3 className="text-xl font-bold text-slate-900 mb-3">Cold Pitch Builder</h3>
               <p className="text-slate-500 text-sm leading-relaxed mb-4">
-                Enter a prospect's URL — our AI analyzes speed, layout, and SEO flaws and generates a custom teardown report with a cold email script.
+                Enter a prospect's URL — the page is fetched and analyzed for speed, layout, and SEO flaws, then a custom teardown report and cold email script are written.
               </p>
               <ul className="space-y-2 text-sm text-slate-600">
                 <li className="flex items-center gap-2"><CheckCircle className="w-4 h-4 text-[#1A9EF2] flex-shrink-0" /> Enter prospect URL</li>
