@@ -65,8 +65,30 @@ async function fetchUrl(targetUrl: string): Promise<FetchResult> {
   }
 }
 
+export function isLockedDimension(dim: AuditDimension): boolean {
+  return dim.checks.length === 1 && !!dim.checks[0]?.check_name.endsWith('_locked');
+}
+
+/**
+ * Weighted overall score across only the dimensions that were actually measured.
+ * Locked dimensions carry no data, so their weight is dropped and the remaining
+ * weights are normalised back to 1 — otherwise every free audit scores in the
+ * teens (and grades "Critical") no matter how good the site is.
+ */
+export function computeOverallScore(dimensions: AuditDimension[]): number {
+  const measured = dimensions.filter(d => !isLockedDimension(d));
+  if (measured.length === 0) return 0;
+
+  const weightOf = (dim: AuditDimension) => DIMENSION_WEIGHTS[dim.dimension] || 0.14;
+  const totalWeight = measured.reduce((sum, dim) => sum + weightOf(dim), 0);
+  if (totalWeight <= 0) return 0;
+
+  const weighted = measured.reduce((sum, dim) => sum + dim.score * weightOf(dim), 0);
+  return Math.round(weighted / totalWeight);
+}
+
 function buildOverallSummary(dimensions: AuditDimension[], overallScore: number): string {
-  const realDims = dimensions.filter(d => d.score > 0 || !d.checks[0]?.check_name.endsWith('_locked'));
+  const realDims = dimensions.filter(d => !isLockedDimension(d));
   const lockedCount = dimensions.length - realDims.length;
   const passed = dimensions.filter(d => d.grade === 'pass').length;
   const warned = dimensions.filter(d => d.grade === 'warn').length;
@@ -75,13 +97,15 @@ function buildOverallSummary(dimensions: AuditDimension[], overallScore: number)
   const strongest = realDims.reduce((prev, curr) => curr.score > prev.score ? curr : prev, realDims[0]);
   const weakest = realDims.reduce((prev, curr) => curr.score < prev.score ? curr : prev, realDims[0]);
 
-  let summary = `Your website scores ${overallScore}/100. `;
-
   if (lockedCount > 0) {
-    summary += `Free audit complete! ${lockedCount} premium dimension${lockedCount > 1 ? 's are' : ' is'} locked. `;
-    summary += 'Upgrade for the full 7-dimension report. ';
-    return summary.trim();
+    // Free audit: the score only reflects the dimensions we actually measured.
+    let partial = `Your site scores ${overallScore}/100 on the ${realDims.length} dimension${realDims.length === 1 ? '' : 's'} this free audit measures. `;
+    partial += `The other ${lockedCount} dimension${lockedCount === 1 ? ' is' : 's are'} locked, so this is not a whole-site score. `;
+    partial += 'Upgrade for the full 7-dimension report.';
+    return partial;
   }
+
+  let summary = `Your website scores ${overallScore}/100. `;
 
   if (overallScore >= 70) {
     summary += 'Looking good! ';
@@ -212,13 +236,8 @@ export async function runAuditFromHtml(html: string, sourceUrl: string, tier: st
       };
     });
 
-    // Calculate overall weighted score
-    let overallScore = 0;
-    for (const dim of dimensions) {
-      const weight = DIMENSION_WEIGHTS[dim.dimension] || 0.14;
-      overallScore += dim.score * weight;
-    }
-    overallScore = Math.round(overallScore);
+    // Calculate overall weighted score — locked dimensions excluded, weights normalised
+    const overallScore = computeOverallScore(dimensions);
 
     const overallSummary = buildOverallSummary(dimensions, overallScore);
 
@@ -336,13 +355,8 @@ export async function runAudit(url: string, options?: { tier?: string }): Promis
       };
     });
 
-    // Calculate overall weighted score
-    let overallScore = 0;
-    for (const dim of dimensions) {
-      const weight = DIMENSION_WEIGHTS[dim.dimension] || 0.14;
-      overallScore += dim.score * weight;
-    }
-    overallScore = Math.round(overallScore);
+    // Calculate overall weighted score — locked dimensions excluded, weights normalised
+    const overallScore = computeOverallScore(dimensions);
 
     const overallSummary = buildOverallSummary(dimensions, overallScore);
 
