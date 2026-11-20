@@ -58,4 +58,8 @@ export interface JwtPayload {
 
 export interface AuthenticatedRequest extends Request {
   user?: JwtPayload;
+  /** Identity of an unauthenticated caller (cookie or hashed-IP fallback). */
+  visitorId?: string;
+  /** Hashed-IP key, set only when the caller sent no visitor cookie. */
+  visitorFallbackId?: string;
 }

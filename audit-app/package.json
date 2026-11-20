@@ -11,6 +11,7 @@
     "build:server": "tsc -p server/tsconfig.json",
     "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts",
     "test:audit-score": "tsx server/src/tests/auditScore.test.ts",
+    "test:visitor": "tsx server/src/tests/anonymousVisitor.test.ts",
     "start": "NODE_ENV=production tsx server/src/index.ts",
     "preview": "vite preview"
   },

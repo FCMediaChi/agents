@@ -57,10 +57,11 @@ export function singleAuditQueue(req: AuthenticatedRequest, res: Response, next:
   next();
 }
 
-// Audit cooldown: 30s between submissions
+// Audit cooldown: 30s between submissions, per identity (account, else visitor,
+// else IP — two visitors behind the same NAT address no longer block each other).
 const auditCooldownMap = new Map<string, number>();
 export function auditCooldown(req: AuthenticatedRequest, res: Response, next: NextFunction): void {
-  const key = req.user?.userId || req.ip || 'unknown';
+  const key = req.user?.userId || req.visitorId || req.ip || 'unknown';
   const last = auditCooldownMap.get(key) || 0;
   const elapsed = Date.now() - last;
   if (elapsed < 30000) {
@@ -100,4 +101,10 @@ export function auditURLBlacklist(req: AuthenticatedRequest, res: Response, next
     }
   }
   next();
+}
+
+/** Test-only: clear the in-memory rate-limit and cooldown counters. */
+export function resetAbuseProtectionState(): void {
+  ipAuditMap.clear();
+  auditCooldownMap.clear();
 }

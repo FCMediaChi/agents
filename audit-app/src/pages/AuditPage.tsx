@@ -144,6 +144,10 @@ const FAQ_ITEMS = [
 export default function AuditPage() {
   useEffect(() => {
     document.title = 'Nuria Website Audit | Nuria AI';
+    // Establishes this visitor's anonymous cookie before the first audit is
+    // submitted, so the free audit is scoped to this browser rather than to a
+    // shared row (see server/src/middleware/visitor.ts).
+    fetch('/api/audit/usage', { credentials: 'include' }).catch(() => {});
   }, []);
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);

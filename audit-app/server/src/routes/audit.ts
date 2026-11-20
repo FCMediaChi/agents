@@ -5,6 +5,7 @@ import { runAudit, runAuditFromHtml } from '../engine/index.js';
 import { runAuditSchema, runAuditFromHtmlSchema } from '../schemas/audit.js';
 import { auditIPRateLimit, singleAuditQueue, auditCooldown, auditURLBlacklist } from '../middleware/abuseProtection.js';
 import { optionalAuth } from '../middleware/auth.js';
+import { anonymousVisitor, usageKeys } from '../middleware/visitor.js';
 import type { AuthenticatedRequest } from '../types.js';
 
 const router = Router();
@@ -12,14 +13,18 @@ const router = Router();
 // Populate req.user when a valid session cookie is present, but never require
 // it: the run-audit flow stays reachable unauthenticated (anonymous = free tier).
 router.use(optionalAuth);
+// Give every unauthenticated caller their own visitor identity (httpOnly cookie,
+// hashed-IP fallback) so the free audit is per visitor rather than one shared
+// 'anonymous' row for the whole internet.
+router.use(anonymousVisitor);
 
 function uuid(): string {
   return crypto.randomUUID();
 }
 
-/** Resolve a scoping key + tier for the request. Anonymous → 'anonymous' / free. */
+/** Resolve a scoping key + tier for the request. Anonymous → per-visitor key. */
 function resolveUserId(req: AuthenticatedRequest): string {
-  return req.user?.userId ?? 'anonymous';
+  return usageKeys(req)[0];
 }
 
 function getUserTier(userId: string): string {
@@ -70,13 +75,16 @@ export interface RunEntitlement {
   tier: string;
   /** True when this run spends one paid Single Use credit. */
   usedCredit: boolean;
+  /** Key holding the credit being spent, when usedCredit is true. */
+  creditKey?: string;
 }
 
-// Enforce the free-tier limit. Premium tiers are unlimited; anonymous users are
-// treated as free tier with the same 1-audit limit (owner decision: anonymous
-// free tier is kept, enforced via audit_usage). A user holding a paid Single Use
-// credit is allowed through even after the free audit is spent.
-export function checkAuditLimit(userId: string): RunEntitlement {
+// Enforce the free-tier limit. Premium tiers are unlimited; anonymous visitors
+// are treated as free tier with the same 1-audit limit, keyed on their own
+// visitor id (see middleware/visitor.ts). `extraKeys` carries the hashed-IP
+// fallback key for callers that did not send the visitor cookie. A user holding
+// a paid Single Use credit is allowed through even after the free audit is spent.
+export function checkAuditLimit(userId: string, extraKeys: string[] = []): RunEntitlement {
   const db = getDb();
   const user = db.prepare('SELECT subscription_tier FROM users WHERE id = ?').get(userId) as
     | { subscription_tier: string }
@@ -86,20 +94,39 @@ export function checkAuditLimit(userId: string): RunEntitlement {
     return { allowed: true, tier: user.subscription_tier.toLowerCase(), usedCredit: false };
   }
 
-  const usage = db.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(userId) as
-    | { audits_run: number }
-    | undefined;
-  const count = usage?.audits_run || 0;
+  const keys = [userId, ...extraKeys];
+  const spent = keys.some((key) => {
+    const usage = db.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(key) as
+      | { audits_run: number }
+      | undefined;
+    return (usage?.audits_run || 0) >= 1;
+  });
 
-  if (count < 1) {
+  if (!spent) {
     return { allowed: true, tier: 'free', usedCredit: false };
   }
 
-  if (getPaidAudits(userId) > 0) {
-    return { allowed: true, tier: 'single', usedCredit: true };
+  const creditKey = keys.find((key) => getPaidAudits(key) > 0);
+  if (creditKey) {
+    return { allowed: true, tier: 'single', usedCredit: true, creditKey };
   }
 
   return { allowed: false, message: 'Free tier limited to 1 audit. Upgrade to run more.', tier: 'free', usedCredit: false };
+}
+
+/** Record one completed run against every key the caller is known by. */
+function recordAuditRun(keys: string[]): void {
+  const db = getDb();
+  for (const key of keys) {
+    const existing = db.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(key) as
+      | { audits_run: number }
+      | undefined;
+    if (existing) {
+      db.prepare("UPDATE audit_usage SET audits_run = audits_run + 1, last_audit_at = datetime('now') WHERE user_id = ?").run(key);
+    } else {
+      db.prepare("INSERT INTO audit_usage (user_id, audits_run, last_audit_at) VALUES (?, 1, datetime('now'))").run(key);
+    }
+  }
 }
 
 // POST /api/audit/run
@@ -111,8 +138,9 @@ router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLB
       return;
     }
 
-    const userId = resolveUserId(req);
-    const limit = checkAuditLimit(userId);
+    const keys = usageKeys(req);
+    const userId = keys[0];
+    const limit = checkAuditLimit(userId, keys.slice(1));
     if (!limit.allowed) {
       res.status(402).json({ error: limit.message });
       return;
@@ -120,7 +148,7 @@ router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLB
 
     // A paid Single Use credit is spent at submission, so a failed run still
     // costs a credit exactly once (and a retry needs no second purchase).
-    if (limit.usedCredit) consumePaidAudit(userId);
+    if (limit.usedCredit) consumePaidAudit(limit.creditKey ?? userId);
 
     const targetUrl = parsed.data.url.startsWith('http') ? parsed.data.url : `https://${parsed.data.url}`;
     const db = getDb();
@@ -157,15 +185,7 @@ router.post('/run', auditIPRateLimit, auditCooldown, singleAuditQueue, auditURLB
         }
       }
 
-      const existing = db2.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(userId) as
-        | { audits_run: number }
-        | undefined;
-      if (existing) {
-        db2.prepare("UPDATE audit_usage SET audits_run = audits_run + 1, last_audit_at = datetime('now') WHERE user_id = ?").run(userId);
-      } else {
-        db2.prepare("INSERT INTO audit_usage (user_id, audits_run, last_audit_at) VALUES (?, 1, datetime('now'))").run(userId);
-      }
-
+      recordAuditRun(keys);
       persistDb();
     }).catch((err) => {
       const db2 = getDb();
@@ -197,8 +217,9 @@ router.post('/run-html', auditIPRateLimit, auditCooldown, singleAuditQueue, audi
       return;
     }
 
-    const userId = resolveUserId(req);
-    const limit = checkAuditLimit(userId);
+    const keys = usageKeys(req);
+    const userId = keys[0];
+    const limit = checkAuditLimit(userId, keys.slice(1));
     if (!limit.allowed) {
       res.status(402).json({ error: limit.message });
       return;
@@ -206,7 +227,7 @@ router.post('/run-html', auditIPRateLimit, auditCooldown, singleAuditQueue, audi
 
     // A paid Single Use credit is spent at submission, so a failed run still
     // costs a credit exactly once (and a retry needs no second purchase).
-    if (limit.usedCredit) consumePaidAudit(userId);
+    if (limit.usedCredit) consumePaidAudit(limit.creditKey ?? userId);
 
     const sourceUrl = parsed.data.url.startsWith('http') ? parsed.data.url : `https://${parsed.data.url}`;
     const db = getDb();
@@ -243,15 +264,7 @@ router.post('/run-html', auditIPRateLimit, auditCooldown, singleAuditQueue, audi
         }
       }
 
-      const existing = db2.prepare('SELECT audits_run FROM audit_usage WHERE user_id = ?').get(userId) as
-        | { audits_run: number }
-        | undefined;
-      if (existing) {
-        db2.prepare("UPDATE audit_usage SET audits_run = audits_run + 1, last_audit_at = datetime('now') WHERE user_id = ?").run(userId);
-      } else {
-        db2.prepare("INSERT INTO audit_usage (user_id, audits_run, last_audit_at) VALUES (?, 1, datetime('now'))").run(userId);
-      }
-
+      recordAuditRun(keys);
       persistDb();
     }).catch((err) => {
       const db2 = getDb();
@@ -383,16 +396,22 @@ router.get('/reports/:id/status', (req: AuthenticatedRequest, res: Response) => 
 // GET /api/audit/usage
 router.get('/usage', (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = resolveUserId(req);
+    const keys = usageKeys(req);
+    const userId = keys[0];
     const db = getDb();
-    const usage = db.prepare('SELECT audits_run, last_audit_at FROM audit_usage WHERE user_id = ?').get(userId) as
-      | { audits_run: number; last_audit_at: string | null }
-      | undefined;
+    let auditsRun = 0;
+    let lastAuditAt: string | null = null;
+    for (const key of keys) {
+      const usage = db.prepare('SELECT audits_run, last_audit_at FROM audit_usage WHERE user_id = ?').get(key) as
+        | { audits_run: number; last_audit_at: string | null }
+        | undefined;
+      auditsRun = Math.max(auditsRun, usage?.audits_run || 0);
+      if (!lastAuditAt) lastAuditAt = usage?.last_audit_at || null;
+    }
 
-    const auditsRun = usage?.audits_run || 0;
     const isFree = getUserTier(userId) === 'free';
     // Paid Single Use credits grant extra full-audit runs without changing tier.
-    const paidAudits = getPaidAudits(userId);
+    const paidAudits = Math.max(0, ...keys.map((key) => getPaidAudits(key)));
     const limit = isFree ? 1 + paidAudits : 999999;
 
     res.json({
@@ -401,7 +420,7 @@ router.get('/usage', (req: AuthenticatedRequest, res: Response) => {
       remaining: isFree && paidAudits > 0 ? paidAudits : Math.max(0, limit - auditsRun),
       is_free_tier: isFree,
       paid_audits_remaining: paidAudits,
-      last_audit_at: usage?.last_audit_at || null,
+      last_audit_at: lastAuditAt,
     });
   } catch (err) {
     console.error('[Audit] Usage error:', err);
