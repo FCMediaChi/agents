@@ -186,7 +186,7 @@ export default function PipelineDashboard() {
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
               <FileText className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-slate-900 mb-2">Case Study Generator</h3>
-              <p className="text-slate-500 max-w-md mx-auto mb-6">Upload screenshots, input traffic/revenue data, link old site — AI generates a narrative case study.</p>
+              <p className="text-slate-500 max-w-md mx-auto mb-6">Upload screenshots, input traffic/revenue data, link old site — generates a written narrative case study.</p>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium"><Clock className="w-4 h-4" />Coming Soon</div>
             </div>
           )}
@@ -196,7 +196,7 @@ export default function PipelineDashboard() {
             <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
               <Send className="w-12 h-12 text-slate-300 mx-auto mb-4" />
               <h3 className="text-lg font-bold text-slate-900 mb-2">Cold Pitch Builder</h3>
-              <p className="text-slate-500 max-w-md mx-auto mb-6">Enter prospect URL — AI analyzes speed/layout/SEO flaws and generates a custom teardown report with cold email script.</p>
+              <p className="text-slate-500 max-w-md mx-auto mb-6">Enter prospect URL — analyzes speed/layout/SEO flaws and generates a custom teardown report with cold email script.</p>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 text-slate-500 text-sm font-medium"><Clock className="w-4 h-4" />Coming Soon</div>
             </div>
           )}
