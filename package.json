@@ -11,7 +11,8 @@
     "build:server": "tsc -b server/tsconfig.json",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "PORT=3000 NODE_ENV=production tsx server/src/index.ts"
+    "start": "PORT=3000 NODE_ENV=production tsx server/src/index.ts",
+    "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",

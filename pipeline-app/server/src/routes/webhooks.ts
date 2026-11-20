@@ -29,24 +29,120 @@ function idOf(value: string | { id?: string } | null | undefined): string | null
   return value.id ?? null;
 }
 
-/**
- * Resolve the price actually paid for a Checkout Session.
- *
- * `checkout.session.completed` normally includes `line_items` automatically
- * (hosted Payment Links include them when the line-item expansion is enabled);
- * we fall back to `metadata.price_id` (set server-side, never user-controlled)
- * when line_items are absent. We deliberately do NOT read a tier from metadata
- * or client_reference_id — the tier must come from the price that was paid.
- */
-export function sessionPriceId(session: Stripe.Checkout.Session): string | null {
+/** The price id carried by a session's `line_items` (payload or retrieved). */
+function lineItemPriceId(session: Stripe.Checkout.Session): string | null {
   const lineItems = (session as any).line_items;
   const items: any[] = Array.isArray(lineItems) ? lineItems : lineItems?.data;
   if (items && items.length) {
     const priceId = items[0]?.price?.id;
     if (priceId) return priceId;
   }
+  return null;
+}
+
+/** The price id of a subscription's first item. */
+export function subscriptionPriceId(subscription: Stripe.Subscription): string | null {
+  const items: any[] = (subscription as any)?.items?.data;
+  if (Array.isArray(items) && items.length) {
+    const priceId = items[0]?.price?.id;
+    if (priceId) return priceId;
+  }
+  return null;
+}
+
+/**
+ * Resolve the price actually paid for a Checkout Session.
+ *
+ * `checkout.session.completed` does NOT include `line_items` unless the endpoint
+ * was configured to expand them, and hosted Payment Links attach no
+ * `metadata.price_id` either — so the payload alone is normally empty and every
+ * real purchase would be skipped as "no resolvable price". See
+ * resolveSessionPriceId() for the API fallback.
+ *
+ * We deliberately do NOT read a tier from metadata or client_reference_id —
+ * the tier must come from the price that was paid.
+ */
+export function sessionPriceId(session: Stripe.Checkout.Session): string | null {
+  const inline = lineItemPriceId(session);
+  if (inline) return inline;
   const meta = (session.metadata || {}) as Record<string, string>;
   return meta.price_id || null;
+}
+
+/** Where a resolved price id came from — logged so a real grant is traceable. */
+export type PriceSource = 'line_items' | 'metadata' | 'retrieved_session' | 'subscription' | 'none';
+
+export interface ResolvedPrice {
+  priceId: string | null;
+  source: PriceSource;
+}
+
+/**
+ * The slice of the Stripe client used to look up a price. Kept as an interface
+ * so the grant path can be unit-tested without a network call or an API key.
+ */
+export interface PriceLookup {
+  retrieveSession(sessionId: string): Promise<Stripe.Checkout.Session>;
+  retrieveSubscription(subscriptionId: string): Promise<Stripe.Subscription>;
+}
+
+/** Wrap a Stripe client in the narrow lookup surface the grant path needs. */
+export function createPriceLookup(stripe: Stripe): PriceLookup {
+  return {
+    retrieveSession: (sessionId: string) =>
+      stripe.checkout.sessions.retrieve(sessionId, { expand: ['line_items'] }),
+    retrieveSubscription: (subscriptionId: string) =>
+      stripe.subscriptions.retrieve(subscriptionId),
+  };
+}
+
+/**
+ * Resolve the paid price, falling back to the Stripe API when the event payload
+ * does not carry one. Never throws: a lookup failure is logged and reported as
+ * `none`, which the caller treats as "skipped" rather than a webhook error.
+ */
+export async function resolveSessionPriceId(
+  session: Stripe.Checkout.Session,
+  lookup: PriceLookup | null = null
+): Promise<ResolvedPrice> {
+  const inline = lineItemPriceId(session);
+  if (inline) return { priceId: inline, source: 'line_items' };
+
+  const meta = (session.metadata || {}) as Record<string, string>;
+  if (meta.price_id) return { priceId: meta.price_id, source: 'metadata' };
+
+  const subscriptionId = idOf(session.subscription);
+
+  if (!lookup) {
+    console.warn(
+      '[Pipeline Stripe Webhook] Session',
+      session.id,
+      'carries no price in its payload and STRIPE_SECRET_KEY is not configured, so the session cannot be retrieved; skipping grant'
+    );
+    return { priceId: null, source: 'none' };
+  }
+
+  if (session.id) {
+    try {
+      const full = await lookup.retrieveSession(session.id);
+      const fromSession = lineItemPriceId(full);
+      if (fromSession) return { priceId: fromSession, source: 'retrieved_session' };
+    } catch (err: any) {
+      console.error('[Pipeline Stripe Webhook] Failed to retrieve session', session.id, 'with line_items:', err.message);
+    }
+  }
+
+  if (subscriptionId) {
+    try {
+      const subscription = await lookup.retrieveSubscription(subscriptionId);
+      const fromSubscription = subscriptionPriceId(subscription);
+      if (fromSubscription) return { priceId: fromSubscription, source: 'subscription' };
+    } catch (err: any) {
+      console.error('[Pipeline Stripe Webhook] Failed to retrieve subscription', subscriptionId + ':', err.message);
+    }
+  }
+
+  return { priceId: null, source: 'none' };
 }
 
 /** Outcome of handling one webhook event — returned for logging and unit tests. */
@@ -63,7 +159,10 @@ export interface WebhookOutcome {
  * Exported separately from the HTTP route so the grant/revoke logic can be
  * unit-tested with synthetic events (see server/src/tests/stripeWebhook.test.ts).
  */
-export function handleStripeEvent(event: Stripe.Event): WebhookOutcome {
+export async function handleStripeEvent(
+  event: Stripe.Event,
+  lookup: PriceLookup | null = null
+): Promise<WebhookOutcome> {
   const db = getDb();
 
   // --- Checkout completed: grant entitlement (if we know who paid) ----------
@@ -76,7 +175,9 @@ export function handleStripeEvent(event: Stripe.Event): WebhookOutcome {
       return { action: 'skipped', reason: 'missing_client_reference_id' };
     }
 
-    const priceId = sessionPriceId(session);
+    // The price is normally NOT in the payload (see resolveSessionPriceId), so
+    // this may make one Stripe API call before the grant can be decided.
+    const { priceId, source } = await resolveSessionPriceId(session, lookup);
     if (!priceId) {
       console.log('[Pipeline Stripe Webhook] checkout.session.completed with no resolvable price; skipping grant for user', userId);
       return { action: 'skipped', reason: 'missing_price', userId };
@@ -100,7 +201,7 @@ export function handleStripeEvent(event: Stripe.Event): WebhookOutcome {
     db.prepare(
       "UPDATE users SET subscription_tier = ?, stripe_customer_id = ?, stripe_subscription_id = ?, updated_at = datetime('now') WHERE id = ?"
     ).run(tier, customerId, subscriptionId, userId);
-    console.log('[Pipeline Stripe Webhook] Granted', tier, 'to user', userId, '(price', priceId + ', sub', subscriptionId + ')');
+    console.log('[Pipeline Stripe Webhook] Granted', tier, 'to user', userId, '(price', priceId + ' via', source + ', sub', subscriptionId + ')');
     return { action: 'granted', userId, tier };
   }
 
@@ -146,7 +247,25 @@ export function handleStripeEvent(event: Stripe.Event): WebhookOutcome {
   return { action: 'ignored', reason: `unhandled_event:${event.type}` };
 }
 
+let _stripe: Stripe | null = null;
+
+/**
+ * A real Stripe-backed price lookup, or null when no API key is configured.
+ *
+ * Signature verification needs no API key, but resolving the price a hosted
+ * Payment Link actually paid DOES require reading the session back from Stripe.
+ * Set STRIPE_SECRET_KEY to enable the grant fallback; without it the webhook can
+ * only trust what the event payload carries (for payment links: no price).
+ */
+function priceLookup(): PriceLookup | null {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) return null;
+  if (!_stripe) _stripe = new Stripe(key);
+  return createPriceLookup(_stripe);
+}
+
 const router = Router();
+
 
 /**
  * POST /api/webhooks/stripe
@@ -157,7 +276,7 @@ const router = Router();
 router.post(
   '/stripe',
   express.raw({ type: 'application/json' }),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     const sig = req.headers['stripe-signature'] as string | undefined;
     const secret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -187,7 +306,7 @@ router.post(
     }
 
     try {
-      const outcome = handleStripeEvent(event);
+      const outcome = await handleStripeEvent(event, priceLookup());
       res.json({ received: true, ...outcome });
     } catch (err: any) {
       // Stripe retries non-2xx responses; a DB failure here is worth retrying.

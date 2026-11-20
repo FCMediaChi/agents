@@ -177,17 +177,17 @@ await initDb();
 
 console.log('\nMigrations');
 
-await test('legacy users table gains stripe_customer_id + stripe_subscription_id', () => {
+await test('legacy users table gains stripe_customer_id + stripe_subscription_id', async () => {
   const cols = userColumns();
   assert.ok(cols.includes('stripe_customer_id'), 'stripe_customer_id column missing');
   assert.ok(cols.includes('stripe_subscription_id'), 'stripe_subscription_id column missing');
 });
 
-await test('legacy audit_usage table gains paid_audits', () => {
+await test('legacy audit_usage table gains paid_audits', async () => {
   assert.ok(usageColumns().includes('paid_audits'), 'paid_audits column missing');
 });
 
-await test('stripe_webhook_events ledger table exists', () => {
+await test('stripe_webhook_events ledger table exists', async () => {
   const row = getDb()
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'stripe_webhook_events'")
     .get() as { name: string } | undefined;
@@ -219,9 +219,9 @@ const grants: [string, string, string][] = [
 ];
 
 for (const [label, priceId, expectedTier] of grants) {
-  await test(`${label} (${priceId}) → grants ${expectedTier}`, () => {
+  await test(`${label} (${priceId}) → grants ${expectedTier}`, async () => {
     resetUser();
-    const outcome = handleStripeEvent(checkoutCompleted({ priceId }));
+    const outcome = await handleStripeEvent(checkoutCompleted({ priceId }));
     assert.equal(outcome.action, 'granted');
     assert.equal(outcome.tier, expectedTier);
     const row = userRow();
@@ -231,40 +231,40 @@ for (const [label, priceId, expectedTier] of grants) {
   });
 }
 
-await test('PRICE_TO_TIER contains exactly the four Audit subscription prices', () => {
+await test('PRICE_TO_TIER contains exactly the four Audit subscription prices', async () => {
   assert.deepEqual(
     Object.keys(PRICE_TO_TIER).sort(),
     [TEAM_MONTHLY, TEAM_YEARLY, AGENCY_MONTHLY, AGENCY_YEARLY].sort()
   );
 });
 
-await test('KNOWN_PRICE_IDS = 4 recurring + the one-time Single Use price', () => {
+await test('KNOWN_PRICE_IDS = 4 recurring + the one-time Single Use price', async () => {
   assert.deepEqual(
     [...KNOWN_PRICE_IDS].sort(),
     [SINGLE, TEAM_MONTHLY, TEAM_YEARLY, AGENCY_MONTHLY, AGENCY_YEARLY].sort()
   );
 });
 
-await test('falls back to metadata.price_id when line_items are absent', () => {
+await test('falls back to metadata.price_id when line_items are absent', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ includeLineItems: false, priceId: null, metadataPriceId: AGENCY_YEARLY })
   );
   assert.equal(outcome.action, 'granted');
   assert.equal(outcome.tier, 'AGENCY');
 });
 
-await test('tier is derived from the price paid, never from client_reference_id', () => {
+await test('tier is derived from the price paid, never from client_reference_id', async () => {
   resetUser();
   // A user-supplied reference id can never escalate the tier: Team price → TEAM.
-  const outcome = handleStripeEvent(checkoutCompleted({ clientReferenceId: USER_ID, priceId: TEAM_MONTHLY }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ clientReferenceId: USER_ID, priceId: TEAM_MONTHLY }));
   assert.equal(outcome.tier, 'TEAM');
 });
 
-await test('Blueprint / Pipeline price ids never grant Audit access', () => {
+await test('Blueprint / Pipeline price ids never grant Audit access', async () => {
   resetUser();
   for (const priceId of [BLUEPRINT_PRICE, PIPELINE_PRICE]) {
-    const outcome = handleStripeEvent(checkoutCompleted({ priceId }));
+    const outcome = await handleStripeEvent(checkoutCompleted({ priceId }));
     assert.equal(outcome.action, 'skipped');
     assert.equal(outcome.reason, 'unknown_price');
     assert.equal(userRow().subscription_tier, 'FREE');
@@ -273,9 +273,9 @@ await test('Blueprint / Pipeline price ids never grant Audit access', () => {
 
 console.log('\nUser matching (anonymous-first app)');
 
-await test('matches the buyer by email when client_reference_id is absent', () => {
+await test('matches the buyer by email when client_reference_id is absent', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: null, email: 'webhook-test@example.com', priceId: TEAM_MONTHLY })
   );
   assert.equal(outcome.action, 'granted');
@@ -283,27 +283,27 @@ await test('matches the buyer by email when client_reference_id is absent', () =
   assert.equal(userRow().subscription_tier, 'TEAM');
 });
 
-await test('email match is case-insensitive', () => {
+await test('email match is case-insensitive', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: null, email: 'WEBHOOK-TEST@EXAMPLE.COM', priceId: AGENCY_MONTHLY })
   );
   assert.equal(outcome.action, 'granted');
   assert.equal(userRow().subscription_tier, 'AGENCY');
 });
 
-await test('client_reference_id wins over the email on the session', () => {
+await test('client_reference_id wins over the email on the session', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: USER_ID, email: 'someone-else@example.com', priceId: TEAM_YEARLY })
   );
   assert.equal(outcome.action, 'granted');
   assert.equal(outcome.matchedBy, 'client_reference_id');
 });
 
-await test('no matching account → skipped, 200-safe, nothing written', () => {
+await test('no matching account → skipped, 200-safe, nothing written', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: 'user_does_not_exist', email: 'nobody@example.com', priceId: TEAM_MONTHLY })
   );
   assert.equal(outcome.action, 'skipped');
@@ -311,18 +311,50 @@ await test('no matching account → skipped, 200-safe, nothing written', () => {
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('anonymous purchase with no email → skipped, no throw', () => {
+await test('anonymous purchase with no email → skipped, no throw', async () => {
   resetUser();
-  const outcome = handleStripeEvent(checkoutCompleted({ clientReferenceId: null, email: null, priceId: TEAM_MONTHLY }));
+  const outcome = await handleStripeEvent(checkoutCompleted({ clientReferenceId: null, email: null, priceId: TEAM_MONTHLY }));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'no_matching_user');
 });
 
+await test('payment-link session with no line_items in the payload → session is retrieved and the tier granted', async () => {
+  resetUser();
+  const retrieved: string[] = [];
+  const lookup = {
+    retrieveSession: async (sessionId: string) => {
+      retrieved.push(sessionId);
+      return {
+        id: sessionId,
+        object: 'checkout.session',
+        line_items: { object: 'list', data: [{ id: 'li_1', price: { id: TEAM_MONTHLY } }] },
+      } as unknown as Stripe.Checkout.Session;
+    },
+    retrieveSubscription: async (id: string) => ({ id, object: 'subscription' } as unknown as Stripe.Subscription),
+  };
+
+  const event = checkoutCompleted({ includeLineItems: false, priceId: null });
+  const outcome = await handleStripeEvent(event, lookup);
+
+  assert.equal(outcome.action, 'granted');
+  assert.equal(outcome.tier, 'TEAM');
+  assert.deepEqual(retrieved, [(event.data.object as any).id]);
+  assert.equal(userRow().subscription_tier, 'TEAM');
+});
+
+await test('no API key configured → still skipped, never crashes', async () => {
+  resetUser();
+  const outcome = await handleStripeEvent(checkoutCompleted({ includeLineItems: false, priceId: null }), null);
+  assert.equal(outcome.action, 'skipped');
+  assert.equal(outcome.reason, 'missing_price');
+  assert.equal(userRow().subscription_tier, 'FREE');
+});
+
 console.log('\nOne-time Single Use ($29, mode payment)');
 
-await test('Single Use grants 1 paid audit credit, not a tier', () => {
+await test('Single Use grants 1 paid audit credit, not a tier', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null, customer: 'cus_single_1' })
   );
   assert.equal(outcome.action, 'credited');
@@ -335,16 +367,16 @@ await test('Single Use grants 1 paid audit credit, not a tier', () => {
   assert.equal(row.stripe_customer_id, null);
 });
 
-await test('a second Single Use purchase stacks credits', () => {
+await test('a second Single Use purchase stacks credits', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
-  handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
+  await handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
+  await handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
   assert.equal(getPaidAudits(USER_ID), 2);
 });
 
-await test('Single Use works for an email-matched buyer too', () => {
+await test('Single Use works for an email-matched buyer too', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: null, email: USER_EMAIL, priceId: SINGLE, mode: 'payment', subscription: null })
   );
   assert.equal(outcome.action, 'credited');
@@ -352,34 +384,34 @@ await test('Single Use works for an email-matched buyer too', () => {
   assert.equal(getPaidAudits(USER_ID), 1);
 });
 
-await test('Single Use with no matching account → skipped, no credit anywhere', () => {
+await test('Single Use with no matching account → skipped, no credit anywhere', async () => {
   resetUser();
-  const outcome = handleStripeEvent(
+  const outcome = await handleStripeEvent(
     checkoutCompleted({ clientReferenceId: null, email: 'nobody@example.com', priceId: SINGLE, mode: 'payment' })
   );
   assert.equal(outcome.action, 'skipped');
   assert.equal(getPaidAudits(USER_ID), 0);
 });
 
-await test('redelivered Single Use event does not grant a second credit', () => {
+await test('redelivered Single Use event does not grant a second credit', async () => {
   resetUser();
   const event = checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null, eventId: 'evt_fixed_single_1' });
-  const first = processStripeEvent(event);
+  const first = await processStripeEvent(event);
   assert.equal(first.action, 'credited');
   assert.equal(getPaidAudits(USER_ID), 1);
 
   // Stripe redelivers the exact same event id.
-  const second = processStripeEvent(event);
+  const second = await processStripeEvent(event);
   assert.equal(second.action, 'skipped');
   assert.equal(second.reason, 'duplicate_event');
   assert.equal(getPaidAudits(USER_ID), 1);
 });
 
-await test('redelivered recurring grant is a no-op but still idempotent-safe', () => {
+await test('redelivered recurring grant is a no-op but still idempotent-safe', async () => {
   resetUser();
   const event = checkoutCompleted({ priceId: TEAM_MONTHLY, eventId: 'evt_fixed_team_1' });
-  assert.equal(processStripeEvent(event).action, 'granted');
-  const again = processStripeEvent(event);
+  assert.equal((await processStripeEvent(event)).action, 'granted');
+  const again = await processStripeEvent(event);
   assert.equal(again.action, 'skipped');
   assert.equal(again.reason, 'duplicate_event');
   assert.equal(userRow().subscription_tier, 'TEAM');
@@ -387,9 +419,9 @@ await test('redelivered recurring grant is a no-op but still idempotent-safe', (
 
 console.log('\nCredit consumption (routes/audit.ts)');
 
-await test('free user with a spent free audit but a credit → allowed as tier "single"', () => {
+await test('free user with a spent free audit but a credit → allowed as tier "single"', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
+  await handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
   getDb().prepare('UPDATE audit_usage SET audits_run = 1 WHERE user_id = ?').run(USER_ID);
 
   const ent = checkAuditLimit(USER_ID);
@@ -398,7 +430,7 @@ await test('free user with a spent free audit but a credit → allowed as tier "
   assert.equal(ent.usedCredit, true);
 });
 
-await test('free user with no credit and a spent free audit → blocked', () => {
+await test('free user with no credit and a spent free audit → blocked', async () => {
   resetUser();
   getDb().prepare('UPDATE audit_usage SET audits_run = 1 WHERE user_id = ?').run(USER_ID);
   const ent = checkAuditLimit(USER_ID);
@@ -406,7 +438,7 @@ await test('free user with no credit and a spent free audit → blocked', () => 
   assert.equal(ent.tier, 'free');
 });
 
-await test('paid tier user → allowed, unlimited, no credit needed', () => {
+await test('paid tier user → allowed, unlimited, no credit needed', async () => {
   resetUser();
   getDb().prepare("UPDATE users SET subscription_tier = 'TEAM' WHERE id = ?").run(USER_ID);
   getDb().prepare('UPDATE audit_usage SET audits_run = 5 WHERE user_id = ?').run(USER_ID);
@@ -416,16 +448,16 @@ await test('paid tier user → allowed, unlimited, no credit needed', () => {
   assert.equal(ent.usedCredit, false);
 });
 
-await test('consumePaidAudit decrements and stops at zero', () => {
+await test('consumePaidAudit decrements and stops at zero', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
+  await handleStripeEvent(checkoutCompleted({ priceId: SINGLE, mode: 'payment', subscription: null }));
   assert.equal(consumePaidAudit(USER_ID), true);
   assert.equal(getPaidAudits(USER_ID), 0);
   assert.equal(consumePaidAudit(USER_ID), false);
   assert.equal(getPaidAudits(USER_ID), 0);
 });
 
-await test('anonymous callers never get credits', () => {
+await test('anonymous callers never get credits', async () => {
   assert.equal(getPaidAudits('anonymous'), 0);
   assert.equal(consumePaidAudit('anonymous'), false);
   const ent = checkAuditLimit('anonymous');
@@ -435,66 +467,66 @@ await test('anonymous callers never get credits', () => {
 
 console.log('\nRevoke logic');
 
-await test('customer.subscription.deleted → revokes to FREE', () => {
+await test('customer.subscription.deleted → revokes to FREE', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
   assert.equal(userRow().subscription_tier, 'TEAM');
 
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
   assert.equal(outcome.action, 'revoked');
   const row = userRow();
   assert.equal(row.subscription_tier, 'FREE');
   assert.equal(row.stripe_subscription_id, null);
 });
 
-await test('revocation is idempotent (repeat event is a no-op, stays FREE)', () => {
+await test('revocation is idempotent (repeat event is a no-op, stays FREE)', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
-  handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
-  const again = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+  await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
+  const again = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled'));
   assert.equal(again.action, 'skipped');
   assert.equal(again.reason, 'already_revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (unpaid) → revokes to FREE', () => {
+await test('customer.subscription.updated (unpaid) → revokes to FREE', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: AGENCY_YEARLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'unpaid'));
+  await handleStripeEvent(checkoutCompleted({ priceId: AGENCY_YEARLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'unpaid'));
   assert.equal(outcome.action, 'revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (canceled) → revokes to FREE', () => {
+await test('customer.subscription.updated (canceled) → revokes to FREE', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: AGENCY_MONTHLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'canceled'));
+  await handleStripeEvent(checkoutCompleted({ priceId: AGENCY_MONTHLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'canceled'));
   assert.equal(outcome.action, 'revoked');
   assert.equal(userRow().subscription_tier, 'FREE');
 });
 
-await test('customer.subscription.updated (active) → entitlement intact', () => {
+await test('customer.subscription.updated (active) → entitlement intact', async () => {
   resetUser();
-  handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'active'));
+  await handleStripeEvent(checkoutCompleted({ priceId: TEAM_MONTHLY }));
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.updated', 'active'));
   assert.equal(outcome.action, 'ignored');
   assert.equal(userRow().subscription_tier, 'TEAM');
 });
 
-await test('cancel for an unknown subscription → skipped, no throw', () => {
-  const outcome = handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled', 'sub_unknown', 'cus_unknown'));
+await test('cancel for an unknown subscription → skipped, no throw', async () => {
+  const outcome = await handleStripeEvent(subscriptionEvent('customer.subscription.deleted', 'canceled', 'sub_unknown', 'cus_unknown'));
   assert.equal(outcome.action, 'skipped');
   assert.equal(outcome.reason, 'no_matching_user');
 });
 
-await test('unrelated event type → ignored', () => {
-  const outcome = handleStripeEvent(evt('invoice.created', { id: 'in_1', object: 'invoice' }));
+await test('unrelated event type → ignored', async () => {
+  const outcome = await handleStripeEvent(evt('invoice.created', { id: 'in_1', object: 'invoice' }));
   assert.equal(outcome.action, 'ignored');
 });
 
 console.log('\nSignature verification (static helper, no API key)');
 
-await test('a valid stripe-signature header verifies against the raw body', () => {
+await test('a valid stripe-signature header verifies against the raw body', async () => {
   const secret = 'whsec_test_secret_for_unit_tests';
   const event = checkoutCompleted({ priceId: TEAM_MONTHLY });
   const payload = JSON.stringify(event);
@@ -505,7 +537,7 @@ await test('a valid stripe-signature header verifies against the raw body', () =
   assert.equal(verified.type, 'checkout.session.completed');
 });
 
-await test('a body tampered with after signing fails verification', () => {
+await test('a body tampered with after signing fails verification', async () => {
   const secret = 'whsec_test_secret_for_unit_tests';
   const payload = JSON.stringify(checkoutCompleted({ priceId: TEAM_MONTHLY }));
   const header = StripeLib.webhooks.generateTestHeaderString({ payload, secret });
@@ -513,7 +545,7 @@ await test('a body tampered with after signing fails verification', () => {
   assert.throws(() => StripeLib.webhooks.constructEvent(tampered, header, secret));
 });
 
-await test('the wrong signing secret fails verification', () => {
+await test('the wrong signing secret fails verification', async () => {
   const payload = JSON.stringify(checkoutCompleted({ priceId: TEAM_MONTHLY }));
   const header = StripeLib.webhooks.generateTestHeaderString({ payload, secret: 'whsec_right' });
   assert.throws(() => StripeLib.webhooks.constructEvent(Buffer.from(payload), header, 'whsec_wrong'));
@@ -521,12 +553,12 @@ await test('the wrong signing secret fails verification', () => {
 
 console.log('\nHelpers');
 
-await test('sessionPriceId prefers line_items over metadata', () => {
+await test('sessionPriceId prefers line_items over metadata', async () => {
   const session = checkoutCompleted({ priceId: TEAM_MONTHLY, metadataPriceId: AGENCY_YEARLY });
   assert.equal(sessionPriceId(session.data.object as any), TEAM_MONTHLY);
 });
 
-await test('sessionEmail lowercases and falls back to customer_email', () => {
+await test('sessionEmail lowercases and falls back to customer_email', async () => {
   assert.equal(sessionEmail({ customer_details: { email: ' BUYER@Example.COM ' } } as any), 'buyer@example.com');
   assert.equal(sessionEmail({ customer_email: 'Other@Example.com' } as any), 'other@example.com');
   assert.equal(sessionEmail({} as any), null);
