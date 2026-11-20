@@ -6,8 +6,13 @@ import { getDb } from '../db.js';
 // Self-contained copy of the monolith's audit abuse-protection middleware,
 // retargeted to audit-app's own db.ts and JWT payload (userId).
 
-// IP-based rate limit: 3 audits per IP per 24h (free tier / anonymous).
+// IP-based rate limit: 30 audits per IP per 24h (free tier / anonymous).
+// This is a coarse abuse guard, not a per-person quota: mobile carriers and
+// office NATs put thousands of real visitors behind one address, so a low
+// number here blocks legitimate first-time visitors. The per-visitor free
+// audit limit is enforced separately (audit_usage / usageKeys).
 // Premium users skip this limit.
+const IP_AUDIT_LIMIT = 30;
 const ipAuditMap = new Map<string, { count: number; resetAt: number }>();
 
 function isPremiumUser(userId: string | undefined): boolean {
@@ -30,8 +35,10 @@ export function auditIPRateLimit(req: AuthenticatedRequest, res: Response, next:
   const entry = ipAuditMap.get(ip);
 
   if (entry && now < entry.resetAt) {
-    if (entry.count >= 3) {
-      res.status(429).json({ error: 'Free tier limited to 3 audits per 24 hours. Sign in or upgrade for more.' });
+    if (entry.count >= IP_AUDIT_LIMIT) {
+      res.status(429).json({
+        error: 'This request could not be completed from your network. Please try again later, or sign in to continue.',
+      });
       return;
     }
     entry.count++;
