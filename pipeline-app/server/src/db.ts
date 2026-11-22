@@ -175,8 +175,20 @@ function initializeSchema(): void {
     )
   `);
 
+  // Per-user, per-calendar-month count of AI prose generations (see aiQuota.ts).
+  db.run(`
+    CREATE TABLE IF NOT EXISTS pipeline_ai_usage (
+      user_id TEXT NOT NULL,
+      period TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (user_id, period),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   const indexes = [
     'CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)',
+    'CREATE INDEX IF NOT EXISTS idx_pipeline_ai_usage_user_id ON pipeline_ai_usage(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_agencies_user_id ON pipeline_agencies(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_case_studies_user_id ON pipeline_case_studies(user_id)',
     'CREATE INDEX IF NOT EXISTS idx_pipeline_pitches_user_id ON pipeline_pitches(user_id)',

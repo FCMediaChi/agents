@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { writeText, parseJsonObject, readProseField, safeWrite, type TextWriter } from './ai.js';
 
 export interface CaseStudyInput {
   client_name: string;
@@ -36,6 +37,8 @@ export interface GeneratedCaseStudy {
   metrics: MetricBlock[];
   narrative_title: string;
   executive_summary: string;
+  /** True when the prose came from the model, false when it is the template. */
+  ai_generated: boolean;
 }
 
 export interface MetricBlock {
@@ -134,12 +137,15 @@ function fmtDuration(sec?: number): string {
   return `${m}m ${s}s`;
 }
 
-export function generateCaseStudy(input: CaseStudyInput, audit?: SiteAuditResult): GeneratedCaseStudy {
-  const td = input.traffic_data || {};
-  const rd = input.revenue_data || {};
-  const auditIssues = audit?.issues || [];
+type TrafficData = NonNullable<CaseStudyInput['traffic_data']>;
+type RevenueData = NonNullable<CaseStudyInput['revenue_data']>;
 
-  // Build metrics
+/**
+ * Metric blocks — pure arithmetic on the numbers the user entered.
+ * These are never written by a model; they are the same today, tomorrow and
+ * after any model failure.
+ */
+export function buildMetrics(td: TrafficData, rd: RevenueData): MetricBlock[] {
   const metrics: MetricBlock[] = [];
 
   if (td.monthly_visitors_before != null && td.monthly_visitors_after != null) {
@@ -202,7 +208,144 @@ export function generateCaseStudy(input: CaseStudyInput, audit?: SiteAuditResult
     });
   }
 
-  // Build Problem section
+  return metrics;
+}
+
+/**
+ * Build a case study for `input`.
+ *
+ * Deterministic by default: metric blocks, the numbered audit issues and the
+ * site-health score are computed here and never delegated. The narrative
+ * sections (problem, solution, results commentary, executive summary) are
+ * written by the model; if it returns nothing usable, the original template
+ * prose is returned unchanged.
+ */
+export async function generateCaseStudy(
+  input: CaseStudyInput,
+  audit?: SiteAuditResult,
+  writer: TextWriter = writeText
+): Promise<GeneratedCaseStudy> {
+  const td = input.traffic_data || {};
+  const rd = input.revenue_data || {};
+  const metrics = buildMetrics(td, rd);
+  const template = buildTemplateContent(input, audit, metrics, td, rd);
+
+  const prose = await writeCaseStudyProse(input, audit, metrics, writer);
+  if (!prose) {
+    return { ...template, metrics, ai_generated: false };
+  }
+
+  const facts = auditIssueBlock(audit);
+  const lines = metricLines(metrics);
+
+  return {
+    problem: facts ? `${prose.problem}\n\n${facts}` : prose.problem,
+    solution: prose.solution,
+    results: lines ? `${lines}\n\n${prose.results}` : prose.results,
+    metrics,
+    narrative_title: template.narrative_title,
+    executive_summary: prose.executive_summary,
+    ai_generated: true,
+  };
+}
+
+/** The numbered audit issues plus the site-health sentence — always our own text. */
+function auditIssueBlock(audit?: SiteAuditResult): string {
+  if (!audit || audit.issues.length === 0) return '';
+
+  let block = `A technical audit of ${audit.url || 'their site'} revealed ${audit.issues.length} key issues:\n\n`;
+  block += audit.issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n');
+  if (audit.score < 50) {
+    block += `\n\nWith an overall site health score of ${audit.score}/100, it was clear that a complete digital overhaul was needed to compete effectively in their market.`;
+  } else if (audit.score < 75) {
+    block += `\n\nWith a site health score of ${audit.score}/100, there was significant room for improvement across multiple areas.`;
+  }
+  return block;
+}
+
+/** Metric blocks rendered as text — always our own numbers. */
+function metricLines(metrics: MetricBlock[]): string {
+  return metrics
+    .map(m => `- **${m.label}**: ${m.before} → ${m.after} (${m.change})`)
+    .join('\n');
+}
+
+interface CaseStudyProse {
+  problem: string;
+  solution: string;
+  results: string;
+  executive_summary: string;
+}
+
+/**
+ * Ask the model for the narrative sections, given the facts we already computed.
+ * Returns null (→ template fallback) on any failure or malformed reply.
+ */
+async function writeCaseStudyProse(
+  input: CaseStudyInput,
+  audit: SiteAuditResult | undefined,
+  metrics: MetricBlock[],
+  writer: TextWriter
+): Promise<CaseStudyProse | null> {
+  const facts: string[] = [`Client name: ${input.client_name}`];
+  if (input.client_url) facts.push(`Client website: ${input.client_url}`);
+  if (input.old_site_url) facts.push(`Previous website: ${input.old_site_url}`);
+
+  if (audit) {
+    facts.push(`Site health score before the work: ${audit.score}/100`);
+    if (audit.issues.length) {
+      facts.push(`Issues found in the old site:\n${audit.issues.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}`);
+    }
+  }
+
+  if (metrics.length) {
+    facts.push(
+      `Measured results (already computed — do not change or add numbers):\n${metrics
+        .map(m => `- ${m.label}: ${m.before} → ${m.after} (${m.change})`)
+        .join('\n')}`
+    );
+  } else {
+    facts.push('No before/after numbers were supplied — do not state any metrics.');
+  }
+
+  const prompt = [
+    'Write the narrative sections of a website redesign case study for an agency portfolio.',
+    '',
+    'Facts (use only these):',
+    ...facts,
+    '',
+    'Requirements:',
+    '- Plain text, no markdown headings, no bullet lists.',
+    '- problem: 2-4 sentences on what was wrong before the work.',
+    '- solution: 3-5 sentences on what the agency did, in past tense.',
+    '- results: 2-3 sentences on the outcome. Refer to the supplied numbers only; if none were supplied, describe the launch without inventing metrics.',
+    '- executive_summary: 2-3 sentences summarising the whole engagement.',
+    '- Never invent numbers, percentages, client names, awards, timelines or guarantees.',
+    '- No urgency or pressure language.',
+    '',
+    'Reply with JSON only, exactly this shape:',
+    '{"problem": "...", "solution": "...", "results": "...", "executive_summary": "..."}',
+  ].join('\n');
+
+  const parsed = parseJsonObject(await safeWrite(writer, prompt));
+  const problem = readProseField(parsed, 'problem');
+  const solution = readProseField(parsed, 'solution');
+  const results = readProseField(parsed, 'results');
+  const executiveSummary = readProseField(parsed, 'executive_summary');
+
+  if (!problem || !solution || !results || !executiveSummary) return null;
+
+  return { problem, solution, results, executive_summary: executiveSummary };
+}
+
+/** The original template prose, unchanged — the fallback whenever AI returns null. */
+function buildTemplateContent(
+  input: CaseStudyInput,
+  audit: SiteAuditResult | undefined,
+  metrics: MetricBlock[],
+  td: TrafficData,
+  rd: RevenueData
+): Omit<GeneratedCaseStudy, 'metrics' | 'ai_generated'> {
   let problem = '';
   if (audit && audit.issues.length > 0) {
     problem = `${input.client_name}'s website was underperforming. A technical audit of ${audit.url || 'their site'} revealed ${audit.issues.length} key issues:\n\n`;
@@ -255,5 +398,5 @@ export function generateCaseStudy(input: CaseStudyInput, audit?: SiteAuditResult
 
   const narrativeTitle = `${input.client_name}: Digital Transformation Case Study`;
 
-  return { problem, solution, results, metrics, narrative_title: narrativeTitle, executive_summary: summary };
+  return { problem, solution, results, narrative_title: narrativeTitle, executive_summary: summary };
 }

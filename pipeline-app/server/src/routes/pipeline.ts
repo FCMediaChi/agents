@@ -7,8 +7,30 @@ import { scrapeCooldown } from '../middleware/abuseProtection.js';
 import type { AuthenticatedRequest } from '../types.js';
 import { generateCaseStudy, auditSite, type CaseStudyInput } from '../caseStudyEngine.js';
 import { analyzePitch } from '../pitchAnalyzer.js';
+import { aiQuotaState, consumeAiGeneration, type AiQuotaState } from '../aiQuota.js';
 
 const router = Router();
+
+/** Current subscription tier for a user (FREE when unknown). */
+function userTier(userId: string): string {
+  const row = getDb()
+    .prepare('SELECT subscription_tier FROM users WHERE id = ?')
+    .get(userId) as { subscription_tier?: string } | undefined;
+  return row?.subscription_tier || 'FREE';
+}
+
+/** 429 body for an exhausted monthly AI-writing allowance. */
+function sendAiQuotaExceeded(res: Response, quota: AiQuotaState): void {
+  res.status(429).json({
+    error: `Monthly AI writing limit reached: ${quota.limit} generations on the ${quota.tier} plan for ${quota.period}. The allowance resets at the start of next month.`,
+    code: 'AI_QUOTA_EXCEEDED',
+    tier: quota.tier,
+    period: quota.period,
+    limit: quota.limit,
+    used: quota.used,
+    remaining: quota.remaining,
+  });
+}
 
 // GET /api/pipeline/me — returns user + trial info (auth only, no trial gate,
 // so an expired-trial user can still read their status)
@@ -172,6 +194,11 @@ router.post('/case-studies/:id/generate', authenticate, requirePipelineAccess, s
   const existing = db.prepare('SELECT * FROM pipeline_case_studies WHERE id = ? AND user_id = ?').get(req.params.id, req.user!.userId) as any;
   if (!existing) { res.status(404).json({ error: 'Case study not found' }); return; }
 
+  // Monthly AI-writing allowance for this user's tier.
+  const tier = userTier(req.user!.userId);
+  const quota = aiQuotaState(req.user!.userId, tier);
+  if (!quota.allowed) { sendAiQuotaExceeded(res, quota); return; }
+
   // Parse stored data
   const td = existing.traffic_data ? JSON.parse(existing.traffic_data) : {};
   const rd = existing.revenue_data ? JSON.parse(existing.revenue_data) : {};
@@ -192,7 +219,10 @@ router.post('/case-studies/:id/generate', authenticate, requirePipelineAccess, s
     traffic_data: td,
     revenue_data: rd,
   };
-  const generated = generateCaseStudy(input, audit);
+  const generated = await generateCaseStudy(input, audit);
+
+  // Only a generation the model actually wrote counts against the monthly cap.
+  if (generated.ai_generated) consumeAiGeneration(req.user!.userId, tier);
 
   // Save
   const gc = JSON.stringify(generated);
@@ -252,6 +282,11 @@ router.post('/pitches/:id/analyze', authenticate, requirePipelineAccess, scrapeC
   if (!pitch) { res.status(404).json({ error: 'Pitch not found' }); return; }
   if (!pitch.prospect_url) { res.status(400).json({ error: 'Prospect URL is required for analysis' }); return; }
 
+  // Monthly AI-writing allowance for this user's tier.
+  const tier = userTier(req.user!.userId);
+  const quota = aiQuotaState(req.user!.userId, tier);
+  if (!quota.allowed) { sendAiQuotaExceeded(res, quota); return; }
+
   // Get agency info for email signature
   let agency;
   const agencyRow = db.prepare('SELECT * FROM pipeline_agencies WHERE user_id = ?').get(req.user!.userId) as any;
@@ -272,9 +307,12 @@ router.post('/pitches/:id/analyze', authenticate, requirePipelineAccess, scrapeC
   // Run analysis
   const analysis = await analyzePitch(pitch.prospect_name, pitch.prospect_url, service, agency);
 
+  // Only an email the model actually wrote counts against the monthly cap.
+  if (analysis.ai_generated) consumeAiGeneration(req.user!.userId, tier);
+
   // Store
   const ar = JSON.stringify({ service, findings: analysis.findings });
-  const ce = JSON.stringify(analysis.email);
+  const ce = JSON.stringify({ subject: analysis.email.subject, body: analysis.email.body, signature: analysis.email.signature });
   db.prepare('UPDATE pipeline_pitches SET audit_results = ?, cold_email = ?, status = ? WHERE id = ?')
     .run(ar, ce, 'analyzed', req.params.id);
 
