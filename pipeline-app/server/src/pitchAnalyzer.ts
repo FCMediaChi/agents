@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio';
+import { writeText, parseJsonObject, readProseField, safeWrite, type TextWriter } from './ai.js';
 
 export interface PitchFinding {
   issue: string;
@@ -16,6 +17,8 @@ export interface ColdEmailScript {
 export interface PitchAnalysis {
   findings: PitchFinding[];
   email: ColdEmailScript;
+  /** True when the email prose came from the model, false when it is the template. */
+  ai_generated: boolean;
 }
 
 interface AgencyInfo {
@@ -46,7 +49,8 @@ export async function analyzePitch(
   prospectName: string,
   url: string,
   service: string,
-  agency?: AgencyInfo
+  agency?: AgencyInfo,
+  writer: TextWriter = writeText
 ): Promise<PitchAnalysis> {
   const findings: PitchFinding[] = [];
   const { html, error } = await fetchSite(url);
@@ -58,7 +62,7 @@ export async function analyzePitch(
       why_matters: 'The site may be down or blocking automated checks.',
       fix: 'Verify the URL is correct and the site is publicly accessible.',
     });
-    return { findings, email: buildFallbackEmail(prospectName, service, agency, url) };
+    return { findings, email: buildFallbackEmail(prospectName, service, agency, url), ai_generated: false };
   }
 
   const $ = cheerio.load(html);
@@ -271,17 +275,96 @@ export async function analyzePitch(
     });
   }
 
-  // Build email script
+  // Build email script. The findings above are final and deterministic; only
+  // the sentences of the email are written by the model, and the template below
+  // is used verbatim whenever the model gives us nothing usable.
+  const agencyName = agency?.agency_name || 'Our team';
+  const serviceLabel = service === 'Other' ? 'improve their website' : service.toLowerCase();
+
+  const email = await composeEmail({
+    prospectName,
+    url,
+    serviceLabel,
+    agencyName,
+    findings,
+    writer,
+  });
+
+  return { findings, email, ai_generated: email.ai_generated };
+}
+
+/** ColdEmailScript plus the flag the caller uses to bill a generation. */
+export type ComposedEmail = ColdEmailScript & { ai_generated: boolean };
+
+export interface ComposeEmailArgs {
+  prospectName: string;
+  url: string;
+  serviceLabel: string;
+  agencyName: string;
+  findings: PitchFinding[];
+  writer?: TextWriter;
+}
+
+/**
+ * Write the outreach email for an already-completed analysis.
+ *
+ * The findings list, counts, subject shape and signature are ours; the model
+ * writes the subject line and body. Any model failure returns the template.
+ */
+export async function composeEmail({
+  prospectName,
+  url,
+  serviceLabel,
+  agencyName,
+  findings,
+  writer = writeText,
+}: ComposeEmailArgs): Promise<ComposedEmail> {
   const criticalCount = findings.filter(f => f.severity === 'critical').length;
   const warningCount = findings.filter(f => f.severity === 'warning').length;
   const totalIssues = findings.length;
 
-  const agencyName = agency?.agency_name || 'Our team';
-  const serviceLabel = service === 'Other' ? 'improve their website' : service.toLowerCase();
+  const template = buildEmail(
+    prospectName, url, serviceLabel, agencyName, findings, criticalCount, warningCount, totalIssues
+  );
 
-  const email = buildEmail(prospectName, url, serviceLabel, agencyName, findings, criticalCount, warningCount, totalIssues);
+  const findingLines = findings
+    .slice(0, 8)
+    .map((f, i) => `${i + 1}. [${f.severity}] ${f.issue} — ${f.why_matters}`)
+    .join('\n');
 
-  return { findings, email };
+  const prompt = [
+    'Write a short, honest cold outreach email from a web design agency to a prospect.',
+    '',
+    `Prospect name: ${prospectName || 'unknown'}`,
+    `Prospect website: ${url}`,
+    `Agency: ${agencyName}`,
+    `Service the agency offers: ${serviceLabel}`,
+    '',
+    `An automated check of the prospect's site produced these ${totalIssues} findings:`,
+    findingLines,
+    '',
+    'Requirements:',
+    '- Plain text only, no markdown, no bullet characters other than a simple hyphen.',
+    '- Subject line: under 70 characters, specific to the site, no hype.',
+    '- Body: 120-170 words, greeting the prospect by name, naming the two most serious findings.',
+    '- Use only the findings above. Do not invent numbers, clients, results, awards or deadlines.',
+    '- No urgency or pressure tactics, no "final notice", no guarantees.',
+    '- End with a low-friction ask for a 15-minute call.',
+    `- Do not sign off with a name; the agency signs separately as "${agencyName}".`,
+    '',
+    'Reply with JSON only, exactly this shape:',
+    '{"subject": "...", "body": "..."}',
+  ].join('\n');
+
+  const parsed = parseJsonObject(await safeWrite(writer, prompt));
+  const subject = readProseField(parsed, 'subject');
+  const body = readProseField(parsed, 'body');
+
+  if (!subject || !body) {
+    return { ...template, ai_generated: false };
+  }
+
+  return { subject, body, signature: template.signature, ai_generated: true };
 }
 
 function buildEmail(

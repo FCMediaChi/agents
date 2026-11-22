@@ -11,7 +11,8 @@
     "build:server": "tsc -p server/tsconfig.json",
     "start": "NODE_ENV=production tsx server/src/index.ts",
     "test:webhook": "tsx server/src/tests/stripeWebhook.test.ts",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:ai": "tsx server/src/tests/ai.test.ts"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.1",
