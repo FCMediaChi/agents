@@ -3,9 +3,21 @@ import { Send, FileText, Mail, Building2, ArrowRight } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 import { TRIAL_DAYS } from '../lib/constants';
 
-const features = [
-  { icon: FileText, title: 'Case Study Generator', text: 'Upload screenshots and results, and get a polished client story you can share.' },
-  { icon: Mail, title: 'Cold Pitch Builder', text: 'Enter a prospect URL and get a quick teardown plus a ready-to-send cold email.' },
+type Feature = { icon: typeof FileText; title: string; text: string; note?: string };
+
+const features: Feature[] = [
+  {
+    icon: FileText,
+    title: 'Case Study Generator',
+    text: 'Upload screenshots and results, and get a polished client story you can share.',
+    note: 'The metrics are computed from the numbers you enter; the narrative is written by an AI model — and it can’t invent figures you didn’t supply.',
+  },
+  {
+    icon: Mail,
+    title: 'Cold Pitch Builder',
+    text: 'Enter a prospect URL and get a quick teardown plus a ready-to-send cold email.',
+    note: 'The teardown is computed from the real page. The email is written from those findings by an AI model — and it won’t invent results you can’t back.',
+  },
   { icon: Building2, title: 'Agency Profile', text: 'Keep your services and positioning in one place so every pitch stays on-brand.' },
 ];
 
@@ -74,13 +86,14 @@ export default function LandingPage() {
             A focused outbound toolkit for freelancers and small agencies.
           </p>
           <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {features.map(({ icon: Icon, title, text }) => (
+            {features.map(({ icon: Icon, title, text, note }) => (
               <div key={title} className="rounded-2xl border border-slate-200 bg-white p-6">
                 <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-light text-brand-secondary">
                   <Icon className="h-5 w-5" />
                 </span>
                 <h3 className="mt-4 text-base font-semibold text-slate-900">{title}</h3>
                 <p className="mt-1 text-sm text-slate-600">{text}</p>
+                {note && <p className="mt-2 text-sm text-slate-600">{note}</p>}
               </div>
             ))}
           </div>
